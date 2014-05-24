@@ -434,7 +434,47 @@ class MatchController extends CI_Controller {
         }
         return $SL;
     }
+    public function gotoProjectPriority() {
+                $_SESSION['text'] = 'sadfa';
+        if (isUserLoggedIn($this)) {
+            $tempProject = new SPW_Project_Model();
+            $tempUser = new SPW_User_Model();
+            $user_id = getCurrentUserId($this);
+            $maxNums = $this->spw_match_model->getAllProjectsMaxStudents();
+            $ranks = $this->spw_match_model->getRanks($user_id);
 
+            if (empty($ranks)) {
+                $no_ranks = true;
+            } else {
+                $no_ranks = false;
+            }
+
+            if ($user_id) {
+                $lRegularProjectsIds = $tempProject->getApprovedProjectsIds();
+            }
+
+            $lRegularProjects = $this->prepareProjectsToShow($lRegularProjectsIds);
+
+
+            if ((!isset($lRegularProjects) || count($lRegularProjects) == 0)) {
+                $no_results = true;
+            } else {
+                $no_results = false;
+            }
+
+            $data['title'] = 'Current Project';
+            $data['no_results'] = $no_results;
+
+            $projects = $lRegularProjects;
+            $data['lRegularProjects'] = $lRegularProjects;
+            $data['maxNums'] = $maxNums;
+            $data['no_ranks'] = $no_ranks;
+            $data['ranks'] = $ranks;
+
+        
+        $this->load->view('project_priority_page', $data);
+        }
+    }
     public function preProcessSteps() {
         // PREPARE PROJECTS
         $PL = $this->prepareProjects();

@@ -79,6 +79,7 @@ $route['(?i)(project)/(create)'] = 'projectcontroller/create_new_project';
 //$route['(?i)(project)/(approval)/(:num)'] = 'projectcontroller/sent_for_approval/$3';
 
 $route['(?i)(match)'] = 'matchcontroller/index';
+$route['(?i)(match)/projectPriority'] = 'matchcontroller/gotoProjectPriority';
 $route['(?i)(match)/(:any)'] = 'matchcontroller/$2';
 $route['(?i)(project)'] = 'projectcontroller/current_project';
 $route['(?i)(project)/(:any)'] = 'projectcontroller/details/$2';

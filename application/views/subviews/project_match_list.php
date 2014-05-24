@@ -81,5 +81,18 @@
         </li>
     <?php }
     ?>
+              
+                <?php
+                echo form_submit(array(
+                    'id' => 'save rank',
+                    'name' => 'save rank',
+                    'type' => 'Submit',
+                    'class' => 'pull-right btn btn-primary',
+                    'value' => 'Save Priority Ranking Scheme'
+                ));
+                ?>
+
+            <?php echo form_close() ?>
+        <br>
 </ul>
 

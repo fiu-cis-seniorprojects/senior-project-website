@@ -57,7 +57,7 @@ function pwd_should_match()
 .ui-accordion .ui-accordion-header
 {
 display: block;
-cursor: pointer:
+cursor: pointer;
 position: relative;
   margin-top: 2px;
 padding: .5em .5em .5em .7em;
