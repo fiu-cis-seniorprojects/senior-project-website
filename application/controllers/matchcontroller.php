@@ -188,44 +188,44 @@ function subsets_equal_to_n($arr, $n) {
 }
 
 function combinations($arr, $max) {
-    $indexes = array_fill(0, count($arr), 0);
+    $indexes = array_fill(0, count($arr), 0);//get count entries of 0's
     $tot = array();
     while (true) {
         $vm = array();
         for ($k = 0; $k < count($indexes); $k++) {
-            array_push($vm, $arr[$k][$indexes[$k]]);
+            array_push($vm, $arr[$k][$indexes[$k]]);//push [0][0] = 0? [1][0] = 0? i.e. first team for each project?
         }
         $numStudents = 0;
         $memberIDs = array();
         foreach ($vm as $team) {
-            $numStudents += count($team->members);
-            array_push($memberIDs, $team->studentIDs);
+            $numStudents += count($team->members);//counter number of students
+            array_push($memberIDs, $team->studentIDs);//push array of id to member id's
         }
-        if ($numStudents == $max) {
-            if (!(checkForDups($memberIDs))) {
-                $tm = new TentativeMatch($vm);
+        if ($numStudents == $max) {//if it is max? huh shouldnt it always be true?
+            if (!(checkForDups($memberIDs))) {//check if student in more than one team
+                $tm = new TentativeMatch($vm);//mark this matching as posssible
                 $profScore = 0;
-                foreach ($tm->projects as $p) {
-                    $projectRank = $p->score;
+                foreach ($tm->projects as $p) {//for each project in tm
+                    $projectRank = $p->score;//get priority rank
                     $pScore = 0;
-                    foreach ($p->members as $member) {
-                        if (array_key_exists($p->projectID, $member->scoreList)) {
+                    foreach ($p->members as $member) {//for each member in p
+                        if (array_key_exists($p->projectID, $member->scoreList)) {//check if member want this project
                             $studentScore = $member->scoreList[$p->projectID];
-                            $tm->studentScore += $studentScore;
-                            $pScore += $studentScore;
+                            $tm->studentScore += $studentScore;//student score of project overall
+                            $pScore += $studentScore;//pscore is equal to all score of students in team for this project
                         }
                     }
-                    $profScore += ($pScore * $projectRank);
+                    $profScore += ($pScore * $projectRank);//count both project rank and student score for match score
                 }
-                $tm->profScore += $profScore;
-                if (count($tot) < 20) {
+                $tm->profScore += $profScore;//update match's score
+                if (count($tot) < 20) {//if less than 20 matchings keep pushing
                     array_push($tot, $tm);
-                    usort($tot, 'compare_prof_score');
+                    usort($tot, 'compare_prof_score');//sort
                 } else {
                     if ($tm->profScore > $tot[count($tot)-1]->profScore) {
                         unset($tot[count($tot)-1]);
                         array_push($tot, $tm);
-                        usort($tot, 'compare_prof_score');
+                        usort($tot, 'compare_prof_score');//sort
                     }
                 }
                 // sort by professor score from highest score to lowest
@@ -239,7 +239,8 @@ function combinations($arr, $max) {
             }
             $indexes[$j] = 0;
             $j--;
-            if ($j < 0) {
+            if ($j < 0) {//exit when all matches considered?
+                print_r($tot[0]);
                 return $tot;
             }
         }
@@ -407,32 +408,32 @@ class MatchController extends CI_Controller {
     }
 
     public function prepareProjects() {
-        $approvedProjects = $this->spw_match_model->getAllApprovedProjectIDs();
-        $projectsMaxStudents = $this->spw_match_model->getAllProjectsMaxStudents();
-        $projectRanks = $this->spw_match_model->getRanksForProjects();
-        $projectTitles = $this->spw_match_model->getProjectNames();
+        $approvedProjects = $this->spw_match_model->getAllApprovedProjectIDs(); //array for approved project's id numbers
+        $projectsMaxStudents = $this->spw_match_model->getAllProjectsMaxStudents(); //array for all projects max student that can joined ([id] gives number for id)
+        $projectRanks = $this->spw_match_model->getRanksForProjects();//array by [project id] = {rank1}? only head prof?
+        $projectTitles = $this->spw_match_model->getProjectNames();//[project id] = name
 
-        $PL = array();
-        foreach ($approvedProjects as $p => $id) {
-            $rank = $projectRanks[$id];
-            if ($rank > 0) {
-                $tempProject = new Project($id, $projectTitles[$id], $this->spw_match_model->getSkillsForProject($id), $rank, $projectsMaxStudents[$id]);
-                array_push($PL, $tempProject);
+        $PL = array();//project list
+        foreach ($approvedProjects as $p => $id) {//have each project p identify for id p not used?
+            $rank = $projectRanks[$id];//get rank
+            if ($rank > 0) {//if rank non-zero
+                $tempProject = new Project($id, $projectTitles[$id], $this->spw_match_model->getSkillsForProject($id), $rank, $projectsMaxStudents[$id]);//construct project
+                array_push($PL, $tempProject);//push project to list, note project is made of id, name, skill array project req, head prof rank, max students that can join
             }
         }
         return $PL;
     }
 
     public function prepareStudents() {
-        $activeStudents = $this->spw_match_model->getAllActiveStudentIDs();
-        $studentNames = $this->spw_match_model->getStudentNames();
+        $activeStudents = $this->spw_match_model->getAllActiveStudentIDs();//arr[i] = id?
+        $studentNames = $this->spw_match_model->getStudentNames();// arr[id] = fname + " " + lname
 
         $SL = array();
         foreach ($activeStudents as $id) {
             $tempStudent = new Student($id, $studentNames[$id], $this->spw_match_model->getSkillsForStudent($id), $this->spw_match_model->getRanksForStudent($id));
             array_push($SL, $tempStudent);
         }
-        return $SL;
+        return $SL;//students are id, name, arr skills, arr of ranks [pro id] = rank
     }
     public function gotoProjectPriority() {
                 $_SESSION['text'] = 'sadfa';
@@ -482,13 +483,13 @@ class MatchController extends CI_Controller {
         $pskillSet = array();
         foreach ($PL as $p) {
             foreach ($p->skills as $s) {
-                array_push($pskillSet, $s);
+                array_push($pskillSet, $s);//push all skills of each project to pskillList so array of array of skills
             }
         }
 
         // need this to get the total amount of each skill in all projects
         // ie skill name => amount of skills
-        $pskillCount = array_count_values_ignore_case($pskillSet);
+        $pskillCount = array_count_values_ignore_case($pskillSet);//array[skill name] = amount of skills in it
 
         //PREPARE STUDENTS
         $SL = $this->prepareStudents();
@@ -502,37 +503,38 @@ class MatchController extends CI_Controller {
             }
         }
 
-        $sskillCount = array_count_values($sskillSet);
+        $sskillCount = array_count_values($sskillSet);//same as above for students?
 
 
-        // Phase 1 Preprocessing
-        $minTot = 0;
-        $maxTot = 0;
+        // Phase 1 Preprocessing AKA enough students/projects?
+        $minTot = 0;//minimum student # needed to fufill ALL projects
+        $maxTot = 0;//maximum student # any more than this and some students might not match
         foreach ($PL as $p) {
-            $minTot += $p->min;
-            $maxTot += $p->max;
+            $minTot += $p->min;//one no matter what? if so VERY redundant
+            $maxTot += $p->max;//varies
         }
 
-        $minCheck = false;
-        $maxCheck = false;
+        $minCheck = false;//check if enough students 
+        $maxCheck = false;//check if too many students!
         $maxDif = 0;
         $minDif = 0;
-        $totStudents = count($SL);
+        $totStudents = count($SL); //total # of active students
         if (!($minTot <= $totStudents)) {
-            $minDif = $minTot - $totStudents;
-        } else {
+            $minDif = $minTot - $totStudents;//too few students find out how many more needed
+        } else {//if  enough students marked as checked yup enough students good
             $minCheck = true;
         }
         if (!($maxTot >= $totStudents)) {
-            $maxDif = $totStudents - $maxTot;
-        } else {
+            $maxDif = $totStudents - $maxTot;//too many students find out difference
+        } else {//if not too many students mark as checked, yup enough students 
             $maxCheck = true;
         }
 
+        //check if enough students and not too many students, just right!
         if (($minCheck && $maxCheck) != true) {
             $minMsg = '';
             $maxMsg = '';
-            if ($minCheck == false) {
+            if ($minCheck == false) {//errors errors everywhere go do em i guess
                 if ($minDif == 1) {
                     $minMsg = ('Sorry, cannot continue. Please unrank projects. Need 1 more student to satisfy project minimum. <br />');
                 } else if ($minDif > 2) {
@@ -547,7 +549,7 @@ class MatchController extends CI_Controller {
                 }
             }
             if ($maxCheck == false && $minCheck == false) {
-                $msg = $minMsg . "<br />" . $maxMsg;
+                $msg = $minMsg . "<br />" . $maxMsg;//is this possible?
             } else if ($maxCheck == false && $minCheck == true) {
                 $msg = $maxMsg;
             } else if ($maxCheck == true && $minCheck == false) {
@@ -579,9 +581,9 @@ class MatchController extends CI_Controller {
         $leftOverCheck = false;
         $neededCheck = false;
         if (!empty($leftOverSkills)) {
-            sort($leftOverSkills, SORT_STRING);
+            sort($leftOverSkills, SORT_STRING);//uh oh matching won't happen!
         } else {
-            $leftOverCheck = true;
+            $leftOverCheck = true;//all skills for all projects accounted for yay!
         }
         if (!empty($neededSkills)) {
             ksort($neededSkills, SORT_STRING);
@@ -590,10 +592,10 @@ class MatchController extends CI_Controller {
                 array_push($needed, $skills);
             }
         } else {
-            $neededCheck = true;
+            $neededCheck = true;//enough students know all skills i for all projects j 
         }
 
-        if ($neededCheck && $leftOverCheck) {
+        if ($neededCheck && $leftOverCheck) {//are there no missing skills/ defecient skills
             foreach ($PL as $p) {
                 foreach ($SL as $s) {
                     if ($p->checkStudent($s)) {
@@ -601,8 +603,10 @@ class MatchController extends CI_Controller {
                     }
                 }
             }
+            $_SESSION['PL'] = $PL;
+            $_SESSION['SL'] = $SL; 
             $this->doMatch();
-        } else {
+        } else {//bad
             $data['neededCheck'] = $neededCheck;
             $data['leftOverCheck'] = $leftOverCheck;
             if (isset($leftOverCheck))
@@ -621,7 +625,7 @@ class MatchController extends CI_Controller {
 //        error_reporting(E_ALL);
 //        ob_implicit_flush(TRUE);
 //        ob_end_flush();
-        // LOAD PRE-PREPARED STUDENTS
+        // LOAD PRE-PREPARED STUDENTS from preprocess i guess?
           $PL = $_SESSION['PL'];
           $SL = $_SESSION['SL'];
 
@@ -631,19 +635,19 @@ class MatchController extends CI_Controller {
 //
 //        $PL = array($p1, $p2, $p3);
 
-        $pskillSet = array();
+        $pskillSet = array();//array of array of skills
         foreach ($PL as $p) {
             foreach ($p->skills as $s) {
                 array_push($pskillSet, $s);
             }
         }
+        
+        usort($PL, 'compare_ranks');//sort project list via ranking
 
-        usort($PL, 'compare_ranks');
-
-        $numProjects = count($PL);
-        $previousRank = null;
-        foreach ($PL as $p) {
-            if (intval($p->score) == $previousRank) {
+        $numProjects = count($PL);//how many projects
+        $previousRank = null;//rank of project before p 
+        foreach ($PL as $p) {//truly rank all projects relative to one another
+            if (intval($p->score) == $previousRank) {//why intval
                 $numProjects++;
                 $previousRank = intval($p->score);
                 $p->score = $numProjects;
@@ -657,7 +661,7 @@ class MatchController extends CI_Controller {
         }
 
         //print_r($pskillSet);
-        $pskillCount = array_count_values_ignore_case($pskillSet);
+        $pskillCount = array_count_values_ignore_case($pskillSet);//array[skill name] = amount of skills in it
 
 //        $rL1 = array('1' => '2', '2' => '1', '3' => '1');
 //        $rL2 = array('1' => '3', '2' => '6', '3' => '6');
@@ -673,7 +677,7 @@ class MatchController extends CI_Controller {
 //
 //        $SL = array($s1, $s2, $s3, $s4, $s5);
 
-        foreach ($SL as $s) {
+        foreach ($SL as $s) {//truly rank student rankings
             $minimum = 2;
             $previousRank = null;
             $x = 0;
@@ -696,37 +700,42 @@ class MatchController extends CI_Controller {
         }
 
         $sskillSet = array();
-        foreach ($SL as $s) {
+        foreach ($SL as $s) {//make list of all student skills plus amount
             foreach ($s->skills as $sk) {
                 array_push($sskillSet, $sk);
             }
         }
 
         // print_r($sskillSet);
-        $sskillCount = array_count_values_ignore_case($sskillSet);
+        $sskillCount = array_count_values_ignore_case($sskillSet);//array of skills #
 
         foreach ($PL as $p) {
             foreach ($SL as $s) {
-                if ($p->checkStudent($s)) {
-                    $p->addDesiredStudent($s);
+                if ($p->checkStudent($s)) {//if students has at least one skill for p
+                    $p->addDesiredStudent($s);//add student
                 }
             }
         }
 
-        $LTL = array();
+        $LTL = array();//list of team list?
+        
+        //What happens: for each project!, get teamlist!, made all possible arrangements of students for project,
+        //for each arranement, made a team out of that, addedum it to TL
+        //then push TL for LTL for projects
+        //End result LTL is  = array where ith element is array for a project where jth element is possibteam for that project 
         foreach ($PL as $p) {
-            $TL = array();
-            $arrangement = subsets_up_to_n($p->desiredStudents, $p->max);
+            $TL = array();//team list
+            $arrangement = subsets_up_to_n($p->desiredStudents, $p->max);// get all arrangements?
             foreach ($arrangement as $a) {
                 $team = new Team($p->id, $p->name, $p->score, $p->skills);
-                $team->addStudents($a);
+                $team->addStudents($a);//add arrangement for s
                 array_push($TL, $team);
             }
             array_push($LTL, $TL);
             unset($TL);
         }
 
-        $comb = combinations($LTL, count($SL));
+        $comb = combinations($LTL, count($SL));//?
         $data['doMatch'] = true;
         $data['comb'] = $comb;
         $this->load->view('match_results_page', $data);
