@@ -66,7 +66,7 @@ if (strlen($fullErrorText) > 0) {
         <div id="phanter-login" class="form-signin stud-login">
             <h3>Students Access</h3>
             <div class="login-service">
-                <a href="<?php echo base_url('/login/regularLogin') ?>">
+                <a href="<?php echo base_url('/login/fiu_oauth2') ?>">
                     <?php echo img(array('src' => '/img/fiu_login.png', 'alt' => 'Panther Mail Login')) ?>
                 </a>
             </div> 
