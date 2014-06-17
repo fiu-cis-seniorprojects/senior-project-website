@@ -122,12 +122,12 @@
         then no students wanted it.</h6>
         <?php
         foreach ($IPL as $p){
-            $missingSkill = array_intersect($p->skills, $p->studentAccumSkills);
+            $missingSkill = array_diff($p->skills, $p->studentAccumSkills);
             echo $p->name;
             echo '<br>';
             foreach($p->skills as $iskill){
                 if(in_array($iskill, $missingSkill)){
-                    echo '<li class="label skill label-warning">';
+                    echo '<li class="label label-warning">';
                 }
                 else{
                     echo '<li class="label skill">';
