@@ -118,7 +118,7 @@
         <!--Put results here-->
         <hr>
         <h3>Unmatched Projects</h3>
-        <h6>Following projects could not be validated for matching. Red skills are skills no active students have. If a project has no red skills
+        <h6>Following projects could not be validated for matching. Red skills are skills no active students who want said project have. If a project has no red skills
         then no students wanted it.</h6>
         <?php
         foreach ($IPL as $p){
