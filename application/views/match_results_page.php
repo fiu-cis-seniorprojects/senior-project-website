@@ -122,7 +122,12 @@
         then no students wanted it.</h6>
         <?php
         foreach ($IPL as $p){
-            $missingSkill = array_diff($p->skills, $p->studentAccumSkills);
+            if(empty($p->studentAccumSkills)){
+                $missingSkill = array_diff($p->skills, $p->studentAccumSkills);    
+            }
+             else {
+                 $missingSkill = $p->studentAccumSkills;
+            }
             echo $p->name;
             echo '<br>';
             foreach($p->skills as $iskill){
