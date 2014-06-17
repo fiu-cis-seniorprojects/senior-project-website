@@ -127,7 +127,7 @@
             echo '<br>';
             foreach($p->skills as $iskill){
                 if(in_array($iskill, $missingSkill)){
-                    echo '<li class="label skill labe-warning">';
+                    echo '<li class="label skill label-warning">';
                 }
                 else{
                     echo '<li class="label skill">';
