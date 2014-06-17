@@ -359,9 +359,13 @@ $config['rewrite_short_tags'] = FALSE;
 */
 $config['proxy_ips'] = '';
 
+//comment out this when in production
+$config['fiu_api_url'] = 'http://spws-dev.cis.fiu.edu:8080/SPW2-RegisterAPI/rest/SPWRegister/getUserInfo/123FIUspw/' ;
+$config['fiu_api_refresh'] = 'http://spws-dev.cis.fiu.edu:8080/SPW2-RegisterAPI/rest/SPWRegister/refresh/123FIUspw' ;
 
-$config['fiu_api_url'] = 'http://srprog-spr13-01.aul.fiu.edu:8080/SPW2-RegisterAPI/rest/SPWRegister/getUserInfo/123FIUspw/' ; 
-$config['fiu_api_refresh'] = 'http://srprog-spr13-01.aul.fiu.edu:8080/SPW2-RegisterAPI/rest/SPWRegister/refresh/123FIUspw' ; 
+//uncomment this when in production
+//$config['fiu_api_url'] = 'http://spws.cis.fiu.edu:8080/SPW2-RegisterAPI/rest/SPWRegister/getUserInfo/123FIUspw/' ;
+//$config['fiu_api_refresh'] = 'http://spws.cis.fiu.edu:8080/SPW2-RegisterAPI/rest/SPWRegister/refresh/123FIUspw' ;
 
 
 /* End of file config.php */
