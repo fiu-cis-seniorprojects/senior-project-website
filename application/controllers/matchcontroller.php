@@ -9,8 +9,9 @@ class Student {
     public $id;
     public $name;
     public $skills = array();
-    public $scoreList = array();
-
+    public $scoreList = array();//score of all projects if less than 1 its unwanted
+    public $projList = array();//list of project this student wants
+    public $PR = array();//PR[id] = project rating for project id
     public function __construct($id, $n, $skills, $scoreList) {
         $this->id = $id;
         $this->name = $n;
@@ -28,8 +29,12 @@ class Project {
     public $skills = array();
     public $desiredStudents = array();
     public $score;
-    public $min = 1;
+    public $min = 1;//might change in future
     public $max;
+    public $isWanted = false;
+    public $enoughSkills = false;
+    public $studentAccumSkills = array();//total interested students skills
+    public $studInterest = 0; //num of students interested
 
     public function __construct($id, $name, $skills, $score, $max) {
         $this->id = $id;
@@ -49,6 +54,13 @@ class Project {
 
     public function addDesiredStudent(Student $studentToAdd) {
         array_push($this->desiredStudents, $studentToAdd);
+    }
+    //accumulate skills interested students have; check if fufill this project's req
+    public function accumulateSkills($skillList) {
+        $this->studentAccumSkills = array_unique(array_merge($skillList,$this->studentAccumSkills));
+        if($this->studentAccumSkills==$this->skills){
+            $this->enoughSkills = true;
+        }
     }
 
 }
@@ -240,7 +252,7 @@ function combinations($arr, $max) {
             $indexes[$j] = 0;
             $j--;
             if ($j < 0) {//exit when all matches considered?
-                print_r($tot[0]);
+                //print_r($tot[0]);
                 return $tot;
             }
         }
@@ -476,147 +488,78 @@ class MatchController extends CI_Controller {
         $this->load->view('project_priority_page', $data);
         }
     }
+    //Prepare database data  to data for matchmaking
     public function preProcessSteps() {
         // PREPARE PROJECTS
         $PL = $this->prepareProjects();
-
-        $pskillSet = array();
-        foreach ($PL as $p) {
-            foreach ($p->skills as $s) {
-                array_push($pskillSet, $s);//push all skills of each project to pskillList so array of array of skills
-            }
-        }
-
-        // need this to get the total amount of each skill in all projects
-        // ie skill name => amount of skills
-        $pskillCount = array_count_values_ignore_case($pskillSet);//array[skill name] = amount of skills in it
-
         //PREPARE STUDENTS
         $SL = $this->prepareStudents();
-
-
-
-        $sskillSet = array();
-        foreach ($SL as $s) {
-            foreach ($s->skills as $sk) {
-                array_push($sskillSet, $sk);
-            }
-        }
-
-        $sskillCount = array_count_values($sskillSet);//same as above for students?
-
-
-        // Phase 1 Preprocessing AKA enough students/projects?
-        $minTot = 0;//minimum student # needed to fufill ALL projects
-        $maxTot = 0;//maximum student # any more than this and some students might not match
-        foreach ($PL as $p) {
-            $minTot += $p->min;//one no matter what? if so VERY redundant
-            $maxTot += $p->max;//varies
-        }
-
-        $minCheck = false;//check if enough students 
-        $maxCheck = false;//check if too many students!
-        $maxDif = 0;
-        $minDif = 0;
-        $totStudents = count($SL); //total # of active students
-        if (!($minTot <= $totStudents)) {
-            $minDif = $minTot - $totStudents;//too few students find out how many more needed
-        } else {//if  enough students marked as checked yup enough students good
-            $minCheck = true;
-        }
-        if (!($maxTot >= $totStudents)) {
-            $maxDif = $totStudents - $maxTot;//too many students find out difference
-        } else {//if not too many students mark as checked, yup enough students 
-            $maxCheck = true;
-        }
-
-        //check if enough students and not too many students, just right!
-        if (($minCheck && $maxCheck) != true) {
-            $minMsg = '';
-            $maxMsg = '';
-            if ($minCheck == false) {//errors errors everywhere go do em i guess
-                if ($minDif == 1) {
-                    $minMsg = ('Sorry, cannot continue. Please unrank projects. Need 1 more student to satisfy project minimum. <br />');
-                } else if ($minDif > 2) {
-                    $minMsg = ('Sorry, cannot continue. Please unrank projects. Need ' . $minDif . ' more students to satisfy projects\' minimum. <br />');
+        //minimum projects a student should have ranked
+        $min = $this->spw_match_model->getMinimum();
+        
+        $VPL = array();//valid project list
+        $IPL = array();//invalid project list
+        $VSL = array();//valid student list
+        $ISL = array();//invalid student list
+        //obtain from db, the weights, for now hard code
+        $studWeight = 2;
+        $profWeight = 1;
+        //check if student s in array SL HAS ranked at least min projects
+        foreach ($SL as $s){
+            $count = 0;
+            $valid = false;
+            foreach($PL as $p){
+                
+                if(array_key_exists($p->id, $s->scoreList) && $s->scoreList[$p->id] > 0){
+                    $count++;
+                    array_push($s->projList, $p);
+                    $s->PR[$p->id] = $studWeight*$s->scoreList[$p->id] +  $profWeight * $p->score;//lower = better
+                    $p->studInterest = $p->studInterest +1;
+                    if($p->studInterest == $p->min){//check if at least min students want project
+                        $p->isWanted = true;//yup project p is wanted 
+                    } 
+                    $p->accumulateSkills($s->skills);//start counting
+                }
+                if($count == $min){
+                    $valid = true;
+                    break;
                 }
             }
-            if ($maxCheck == false) {
-                if ($maxDif == 1) {
-                    $maxMsg = ('Sorry, cannot continue. Please rank or add more projects. Need to find projects for 1 more student. <br />');
-                } else if ($maxDif > 2) {
-                    $maxMsg = ('Sorry, cannot continue. Please rank or add more projects. Need to find projects for ' . $maxDif . ' more students. <br />');
+            if($valid){
+                array_push ($VSL, $s);
+            }
+            else{
+                array_push ($ISL, $s);
+            }
+        }
+        //used collected data to formally validate projects
+        foreach($PL as $p){
+            if($p->isWanted && $p->enoughSkills){
+                array_push ($VPL, $p);
+            }
+            else{
+                array_push($IPL, $p);
+            }
+        }
+        //remove now invalid projects from PR which is how projects for 
+        //students are evaluated, sort PR list by ascending
+        foreach($VSL as $s){
+            foreach($IPL as $p){
+                if(array_key_exists($p->id, $s->PR)){
+                    unset($s->PR[$p->id]);
                 }
             }
-            if ($maxCheck == false && $minCheck == false) {
-                $msg = $minMsg . "<br />" . $maxMsg;//is this possible?
-            } else if ($maxCheck == false && $minCheck == true) {
-                $msg = $maxMsg;
-            } else if ($maxCheck == true && $minCheck == false) {
-                $msg = $minMsg;
-            }
-            setErrorFlashMessage($this, $msg);
-            redirect('match');
+            asort($s->PR);//sort 
         }
-
-
-        // Phase 2 Preprocessing
-        // no students have these skills
-        $leftOverSkills = array();
-        // students have these skills the remain variable shows 
-        // how many more students needed to have these skills 
-        // to fulfill all projects with these skills missing
-        $neededSkills = array();
-        foreach ($pskillCount as $skill => $count) {
-            if (array_key_exists($skill, $sskillCount)) {
-                if (!($count <= $sskillCount[$skill])) {
-                    $remain = $count - $sskillCount[$skill];
-                    $neededSkills[$skill] = $remain;
-                }
-            } else {
-                array_push($leftOverSkills, $skill);
-            }
-        }
-
-        $leftOverCheck = false;
-        $neededCheck = false;
-        if (!empty($leftOverSkills)) {
-            sort($leftOverSkills, SORT_STRING);//uh oh matching won't happen!
-        } else {
-            $leftOverCheck = true;//all skills for all projects accounted for yay!
-        }
-        if (!empty($neededSkills)) {
-            ksort($neededSkills, SORT_STRING);
-            $needed = array();
-            foreach ($neededSkills as $skills => $num) {
-                array_push($needed, $skills);
-            }
-        } else {
-            $neededCheck = true;//enough students know all skills i for all projects j 
-        }
-
-        if ($neededCheck && $leftOverCheck) {//are there no missing skills/ defecient skills
-            foreach ($PL as $p) {
-                foreach ($SL as $s) {
-                    if ($p->checkStudent($s)) {
-                        $p->addDesiredStudent($s);
-                    }
-                }
-            }
-            $_SESSION['PL'] = $PL;
-            $_SESSION['SL'] = $SL; 
-            $this->doMatch();
-        } else {//bad
-            $data['neededCheck'] = $neededCheck;
-            $data['leftOverCheck'] = $leftOverCheck;
-            if (isset($leftOverCheck))
-                $data['leftOverSkills'] = $leftOverSkills;
-            if (isset($needed))
-                $data['neededSkills'] = $needed;
-            $_SESSION['PL'] = $PL;
-            $_SESSION['SL'] = $SL; 
-            $this->load->view('match_results_page', $data);
-        }
+        
+        //sort students via skill amount, TBD if necessary
+        
+        $data['test'] = true;
+        $data['ISL'] = $ISL;
+        $data['IPL'] = $IPL;
+        //pass to doMatch but for demonstation do this
+        $this->load->view('match_results_page', $data);
+       
     }
 
     public function doMatch() {

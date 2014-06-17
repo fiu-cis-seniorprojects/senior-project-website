@@ -111,7 +111,45 @@
         }
         ?>
     </ul>
-
+     <!--Note: "warning" to make red; "success" for green-->
+        <h1>Match Result Page</h1>
+        
+        <h3>Successful Matchings</h3>
+        <!--Put results here-->
+        <hr>
+        <h3>Unmatched Projects</h3>
+        <h6>Following projects could not be validated for matching. Red skills are skills no active students have. If a project has no red skills
+        then no students wanted it.</h6>
+        <?php
+        foreach ($IPL as $p){
+            $missingSkill = array_intersect($p->skills, $p->studentAccumSkills);
+            echo $p->name;
+            echo '<br>';
+            foreach($p->skills as $iskill){
+                if(in_array($iskill, $missingSkill)){
+                    echo '<li class="label skill labe-warning">';
+                }
+                else{
+                    echo '<li class="label skill">';
+                }
+                echo $iskill;
+                           
+                echo '</li>';
+            }
+            echo '<br>';
+        }
+        ?>
+        <h6>Following projects could not be matched via matchmaking.</h6>
+        <hr>
+        <h3>Unmatched Students</h3>
+        <h6>The following students did not rank "rank minimum" number of projects.</h6>
+        <?php
+        foreach ($ISL as $s){
+            echo $s->name;
+            echo '<br>';
+        }
+        ?>
+        <h6>Following students could not be matched via matchmaking.</h6>
 
     <?php $this->load->view("template_footer"); ?>
 
