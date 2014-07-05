@@ -112,51 +112,142 @@
         ?>
     </ul>
      <!--Note: "warning" to make red; "success" for green-->
-        <h1>Match Result Page</h1>
-        
-        <h3>Successful Matchings</h3>
-        <!--Put results here-->
-        <hr>
-        <h3>Unmatched Projects</h3>
-        <h6>Following projects could not be validated for matching. Red skills are skills no active students who want said project have. If a project has no red skills
-        then no students wanted it.</h6>
+     <h1>Other Projects</h1>
+     <h6>Choose one of two versions to proceed for match finalization.</h6>
+     Note: When applicable green means the skill is fulfilled. Red unfulfilled. Gray unnecessary.
+     <h2>Friendly Matching (Student's get their desires):</h2>
         <?php
-        foreach ($IPL as $p){
-            if(empty($p->studentAccumSkills)){
-                $missingSkill = array_diff($p->skills, $p->studentAccumSkills);    
-            }
-             else {
-                 $missingSkill = $p->studentAccumSkills;
-            }
-            echo $p->name;
-            echo '<br>';
-            foreach($p->skills as $iskill){
-                if(in_array($iskill, $missingSkill)){
-                    echo '<li class="label label-warning">';
-                }
-                else{
-                    echo '<li class="label skill">';
-                }
-                echo $iskill;
-                           
+     foreach ($PLf as $p)  {
+         echo '<h3>';
+         echo $p->name;
+         echo '</h3>';
+         echo '';
+         echo '<b>Student Interest Average: ';
+         echo $p->calculateAvgInterest();
+         echo '</b><br>';
+         echo '<b>Skill Total Fulfillment: ';
+         echo $p->calculateTotalFulfillment();
+         echo '%</b><br>';
+         echo '<b>Student Average Fulfillment: ';
+         echo $p->calculateAvgFulfillment();
+         echo '%</b><br>';
+         echo '<b>Skill Fulfillment Data:</b><br>';
+         foreach ($p->fulfilledSkills as $s) {
+             echo '<li class="label label-success skill">';
+             echo $s;
+             echo '</li>';
+             echo ' ';
+         }    
+         foreach ($p->missingSkills as $s) {
+             echo '<li class="label label-warning skill">';
+             echo $s;
+             echo '</li>';
+             echo ' ';
+         }
+         
+         echo '<br><h5>Students Added:</h5>';
+         foreach($p->desiredStudents as $s){
+             echo '<h6>';
+             echo $s->name;
+             echo '</h6>';
+             echo 'Interest: ';
+             echo $s->scoreList[$p->id];
+             echo '<br>';
+             echo '% of Project Skills Acheived:';
+             echo $p->figureSkillContribution($s);
+             echo '%<br>';
+             echo 'Skill contribution:';
+             echo '<br>';
+             
+             foreach ($s->fufilledSkills as $skill) {
+                echo '<li class="label label-success skill">';
+                echo $skill;
                 echo '</li>';
+                echo ' ';
+            }
+            foreach ($s->missingSkills as $skill) {
+                echo '<li class="label label-warning skill">';
+                echo $skill;
+                echo '</li>';
+                echo ' ';
+            }
+            foreach ($s->overflowSkills as $skill) {
+                echo '<li class="label skill">';
+                echo $skill;
+                echo '</li>';
+                echo ' ';
             }
             echo '<br>';
-        }
+         }
+         echo '<hr>';
+     }
         ?>
-        <h6>Following projects could not be matched via matchmaking.</h6>
-        <hr>
-        <h3>Unmatched Students</h3>
-        <h6>The following students did not rank "rank minimum" number of projects.</h6>
+     <h2>Compromise Matching (Student's compromise with projects):</h2>
         <?php
-        foreach ($ISL as $s){
-            echo $s->name;
+     foreach ($PLc as $p) {
+         echo '<h3>';
+         echo $p->name;
+         echo '</h3>';
+         echo '';
+         echo '<b>Student Interest Average: ';
+         echo $p->calculateAvgInterest();
+         echo '</b><br>';
+         echo '<b>Skill Total Fulfillment: ';
+         echo $p->calculateTotalFulfillment();
+         echo '%</b><br>';
+         echo '<b>Student Average Fulfillment: ';
+         echo $p->calculateAvgFulfillment();
+         echo '%</b><br>';
+         echo '<b>Skill Fulfillment Data:</b><br>';
+         foreach ($p->fulfilledSkills as $s) {
+             echo '<li class="label label-success skill">';
+             echo $s;
+             echo '</li>';
+             echo ' ';
+         }    
+         foreach ($p->missingSkills as $s) {
+             echo '<li class="label label-warning skill">';
+             echo $s;
+             echo '</li>';
+             echo ' ';
+         }
+         
+         echo '<br><h5>Students Added:</h5>';
+         foreach($p->desiredStudents as $s){
+             echo '<h6>';
+             echo $s->name;
+             echo '</h6>';
+             echo 'Interest: ';
+             echo $s->scoreList[$p->id];
+             echo '<br>';
+             echo '% of Project Skills Acheived:';
+             echo $p->figureSkillContribution($s);
+             echo '%<br>Skill contribution:';
+             echo '<br>';
+             
+             foreach ($s->fufilledSkills as $skill) {
+                echo '<li class="label label-success skill">';
+                echo $skill;
+                echo '</li>';
+                echo ' ';
+            }
+            foreach ($s->missingSkills as $skill) {
+                echo '<li class="label label-warning skill">';
+                echo $skill;
+                echo '</li>';
+                echo ' ';
+            }
+            foreach ($s->overflowSkills as $skill) {
+                echo '<li class="label skill">';
+                echo $skill;
+                echo '</li>';
+                echo ' ';
+            }
             echo '<br>';
-        }
+         }
+         echo '<hr>';
+     }
         ?>
-        <h6>Following students could not be matched via matchmaking.</h6>
-
     <?php $this->load->view("template_footer"); ?>
-
 
 

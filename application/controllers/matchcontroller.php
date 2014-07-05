@@ -9,9 +9,16 @@ class Student {
     public $id;
     public $name;
     public $skills = array();
+    public $wildcard = false; //if student has not ranked rank mimimum projects
     public $scoreList = array();//score of all projects if less than 1 its unwanted
     public $projList = array();//list of project this student wants
     public $PR = array();//PR[id] = project rating for project id
+    public $relevant = array();//current relevant skills in a tree
+    public $traversal = 0; //index of current traversal
+    public $iProjList = array();//iterative array for projList
+    public $missingSkills = array();//skills student missing in project currently added
+    public $fulfilledSkills = array();//skills sutdent has for current project
+    public $overflowSkills = array();//skills not contributing to current project
     public function __construct($id, $n, $skills, $scoreList) {
         $this->id = $id;
         $this->name = $n;
@@ -31,11 +38,10 @@ class Project {
     public $score;
     public $min = 1;//might change in future
     public $max;
-    public $isWanted = false;
-    public $enoughSkills = false;
-    public $studentAccumSkills = array();//total interested students skills
-    public $studInterest = 0; //num of students interested
-
+    public $studScore = 1; //student score , note these are for projects stored in students 
+    public $studSkillPercent = 0;//student skill percent acheived
+    public $missingSkills = array();
+    public $fulfilledSkills = array();
     public function __construct($id, $name, $skills, $score, $max) {
         $this->id = $id;
         $this->name = $name;
@@ -51,18 +57,120 @@ class Project {
         }
         return false;
     }
+    
+    //evaluate s as worse than sw (true or false) given criteria compromise
+    public function evaluateAsWorse($s,$sw,$compromise) {
+        
+        $sPercent = calculateSkillPercent($this, $s);
+        $swPercent = calculateSkillPercent($this, $sw);
+        $sScore = $s->scoreList[$this->id];
+        $swScore = $sw->scoreList[$this->id];
+        
+        if($compromise){//percent more important than score
+            if($sPercent == $swPercent){
+                return $sScore <= $swScore;
+            }
+            return $sPercent < $swPercent;
+        }
+        else{//vice vera
+            if($sScore == $swScore){
+                return $sPercent <= $swPercent;
+            }
+            return $sScore < $swScore;
+        }
+    }
+    
+    //get worst student of p given criteria
+    public function getWorst($compromise) {
+        
+        $sw = null;
+        
+        foreach($this->desiredStudents as $s){
+            if($sw == null){
+                $sw = $s;
+            }
+            elseif($this->evaluateAsWorse($s,$sw,$compromise)){
+                $sw = $s;
+            }
+        }
+        return $sw;
+        
+    }
+    
+    //see if s is better fit for p then sw
+    public function betterFit($s,$sw,$compromise) {
+        
+        if(!$this->evaluateAsWorse($s,$sw,$compromise)){//if not worse
+            
+            foreach ($this->desiredStudents as $key => $value) {
+                if($value->id == $sw->id){
+                    unset($this->desiredStudents[$key]);
+                }
+            }
+            
+            array_push($this->desiredStudents, $s);
+            return true;//remove sw put in s, return true s is better fit
+        }
+        return false;//s not better fit
+        
+    }
+    
+    //is filled?
+    public function filled() {
+        return (count($this->desiredStudents) == $this->max);
+    }
 
     public function addDesiredStudent(Student $studentToAdd) {
         array_push($this->desiredStudents, $studentToAdd);
     }
-    //accumulate skills interested students have; check if fufill this project's req
-    public function accumulateSkills($skillList) {
-        $this->studentAccumSkills = array_unique(array_merge($skillList,$this->studentAccumSkills));
-        if($this->studentAccumSkills==$this->skills){
-            $this->enoughSkills = true;
+    
+    //Calculate skill metadata for later display
+    public function generateSkillMetaData(){
+        $studentsSkills = array();
+        
+        //get student culmulative skills
+        foreach($this->desiredStudents as $s){
+            $studentsSkills = array_unique(array_merge($studentsSkills,$s->skills));
         }
+        //get skills  project still needs and has fulfilled
+        $this->missingSkills = array_diff($this->skills,$studentsSkills);
+        $this->fulfilledSkills = array_diff($this->skills, $this->missingSkills);
+        sort($this->skills);
+        //for each student find out what skills they're missing for this project
+        //what skills they have for it and what skills are not needed
+        foreach ($this->desiredStudents as $k => $s) {
+            $s->missingSkills = array_diff($this->skills, $s->skills);
+            $s->fufilledSkills = array_diff($this->skills, $s->missingSkills);
+            $s->overflowSkills = array_diff($s->skills, $this->skills);
+            $this->desiredStudents[$k] = $s;
+        }
+        sort($this->missingSkills);
+        sort($this->fulfilledSkills);
     }
-
+    public function calculateAvgInterest() {
+        $avg = 0;
+        foreach ($this->desiredStudents as $s) {
+            $avg = $s->scoreList[$this->id] + $avg;
+        }
+        return round($avg/count($this->desiredStudents));
+        
+    }
+    public function calculateTotalFulfillment() {
+        return round(100*(count($this->fulfilledSkills)/count($this->skills)));
+    }
+    public function calculateAvgFulfillment() {
+        $avg = 0;
+        foreach ($this->desiredStudents as $s) {
+            $avg = $this->figureSkillContribution($s) + $avg;
+        }
+        return round($avg/count($this->desiredStudents));
+    }
+    public function figureSkillContribution($s){
+        $diff = array_diff($this->skills, $s->skills);
+        $diff2 = array_diff($this->skills, $diff);
+        
+        return round(100*(count($diff2)/count($this->skills)));
+    }
 }
 
 class Team {
@@ -111,11 +219,12 @@ class TentativeMatch {
 
 }
 
+//sort by professor score
 function compare_ranks($a, $b) {
     if ($a->score == $b->score) {
         return 0;
     }
-    return ($a->score < $b->score) ? -1 : 1;
+    return ($a->score > $b->score) ? -1 : 1;
 }
 
 function compare_prof_score($a, $b) {
@@ -123,6 +232,49 @@ function compare_prof_score($a, $b) {
         return 0;
     }
     return ($a->profScore < $b->profScore) ? 1 : -1;
+}
+function compare_students($a,$b){//ERROR maybe
+    $s1 = array_count_values_ignore_case($a->relevant);
+    $s2 = array_count_values_ignore_case($b->relevant);
+    $s11= array_count_values_ignore_case($a->skills);
+    $s22 = array_count_values_ignore_case($b->skills);
+    
+    if($s1 == $s2){
+        if($s11 == $s22){
+            return 0;
+        }
+        return ($s11 < $s22) ? -1 : 1;
+    }
+    
+    return ($s1 < $s2) ? 1 : -1;
+}
+
+//sorting student's projects to traverse their interested in projects
+//second layer of comparison mainly for wildcard students
+function compare_student_project($a,$b) {
+    
+    if($a->studScore == $b->studScore){
+        
+        if($a->studSkillPercent == $b->studSkillPercent){
+            return 0;
+        }
+        
+        return ($a->studSkillPercent < $b->studSkillPercent) ? 1:-1;
+        
+    }
+    
+    return ($a->studScore < $b->studScore) ? 1: -1;
+    
+}
+
+//calculate the amount of skills students have for project over skills for project as percentage
+function calculateSkillPercent($p,$s){
+    $pSkills = $p->skills;
+    $sSkills = $s->skills;
+    $diff = array_diff($pSkills, $sSkills);
+    $intersect = array_diff($pSkills,$diff);
+    
+    return round(100*(count($intersect)/count($pSkills)));
 }
 
 function array_count_values_ignore_case($array) {
@@ -192,7 +344,6 @@ function subsets_equal_to_n($arr, $n) {
                 }
                 $pos++;
             }
-            //var_dump($a);
             array_push($subset, ($a));
         }
     }
@@ -488,7 +639,7 @@ class MatchController extends CI_Controller {
         $this->load->view('project_priority_page', $data);
         }
     }
-    //Prepare database data  to data for matchmaking
+    //Prepare database data  to data for matchmaking V4
     public function preProcessSteps() {
         // PREPARE PROJECTS
         $PL = $this->prepareProjects();
@@ -497,71 +648,251 @@ class MatchController extends CI_Controller {
         //minimum projects a student should have ranked
         $min = $this->spw_match_model->getMinimum();
         
-        $VPL = array();//valid project list
-        $IPL = array();//invalid project list
-        $VSL = array();//valid student list
-        $ISL = array();//invalid student list
-        //obtain from db, the weights, for now hard code
-        $studWeight = 2;
-        $profWeight = 1;
-        //check if student s in array SL HAS ranked at least min projects
-        foreach ($SL as $s){
-            $count = 0;
-            $valid = false;
-            foreach($PL as $p){
+        $VIP = array();//very important projects
+        $PPL = array();//processed project list
+        $PSL = array();//processed student list
+    
+        foreach ($SL as $s){//populate student data
+            $valid = false;//see if s ranked "rank mimimum"
+            $count = 0; //count for rank mimimum
+            sort($s->skills);//sort student skills useful for heuristic time save
+            foreach($PL as $p){//for each project
                 
-                if(array_key_exists($p->id, $s->scoreList) && $s->scoreList[$p->id] > 0){
-                    $count++;
-                    array_push($s->projList, $p);
-                    $s->PR[$p->id] = $studWeight*$s->scoreList[$p->id] +  $profWeight * $p->score;//lower = better
-                    $p->studInterest = $p->studInterest +1;
-                    if($p->studInterest == $p->min){//check if at least min students want project
-                        $p->isWanted = true;//yup project p is wanted 
-                    } 
-                    $p->accumulateSkills($s->skills);//start counting
+                if(array_key_exists($p->id, $s->scoreList) && $s->scoreList[$p->id] > 0){//check if student ranked it
+                    $count++;//if so increment count
+                    $s->projList[$p->id] = $p;//push to student's project list
                 }
-                if($count == $min){
+                if($count == $min){//if they ranked rank minimum state as true
                     $valid = true;
-                    break;
                 }
             }
-            if($valid){
-                array_push ($VSL, $s);
+            if(!$valid){//make student wildcard (did not rank rank minimum)
+                $s->wildcard = true;// this will be used for special things
+                $s->projList = array();
+                foreach($PL as $p){//push all projects onto student
+                    $s->projList[$p->id] = $p;;
+                    $s->scoreList[$p->id] = 1;//wildcard students don't have opinions
+                }                
             }
-            else{
-                array_push ($ISL, $s);
+            else{//else save student score for project p in s and project compatabiltiy
+                foreach($s->projList as $p){
+                    $p->studScore = $s->scoreList[$p->id];
+                    $p->studSkillPercent = round(calculateSkillPercent($p,$s));
+                }
             }
+            $s->iProjList = $s->projList;
+            usort($s->iProjList, 'compare_student_project');
+            $s->iProjList = array_values($s->iProjList);//iterative project list
+            
+            array_push ($PSL, $s);
         }
-        //used collected data to formally validate projects
+        //put projects in VIP listing or normal listing
         foreach($PL as $p){
-            if($p->isWanted && $p->enoughSkills){
-                array_push ($VPL, $p);
+            if($p->score > 1){
+                $VIP[$p->id] = $p;;
             }
             else{
-                array_push($IPL, $p);
+                $PPL[$p->id] = $p;;
             }
         }
-        //remove now invalid projects from PR which is how projects for 
-        //students are evaluated, sort PR list by ascending
-        foreach($VSL as $s){
-            foreach($IPL as $p){
-                if(array_key_exists($p->id, $s->PR)){
-                    unset($s->PR[$p->id]);
-                }
-            }
-            asort($s->PR);//sort 
-        }
         
-        //sort students via skill amount, TBD if necessary
+        usort($VIP,"compare_ranks");//sort VIP from most to least important
         
-        $data['test'] = true;
-        $data['ISL'] = $ISL;
-        $data['IPL'] = $IPL;
+        //$VIP = $this->doMatchPhase1($VIP,$SL);//do matching for VIP
+        
+        //$data['VIP'] = $VIP;
+        
+        //$SL = $this->
+        
+        $this->doMatchPhase1($VIP, $SL, $PPL);
+        
         //pass to doMatch but for demonstation do this
-        $this->load->view('match_results_page', $data);
+        //$this->load->view('match_results_page', $data);
        
     }
 
+    //VIP matching V4
+    public function doMatchPhase1($PL, $SL, $PL2){
+            $VIPf = $PL;//VIP project to have friendly result
+            $VIPs = $PL;//VIP project to have scientific result
+            unset($PL); //destroy
+            /*Eventually do VIPf and VIPs
+             * foreach($PL as $p){
+                $team = $this->backtracking($SL,$p->skills,$p->max);
+                foreach($team as $t){
+                    $p->addDesiredStudent($t);
+                }
+            }
+             * Refine SL here for PL2
+             */
+            
+            $SLr = $SL;//temporary should be reduced student list 
+            
+            //should load view to new match page 
+            $data['VIPf'] = $VIPf;
+            $data['VIPs'] = $VIPs;
+            $data['PL2'] = $PL2;
+            $data['SL'] = $SL;
+            $data['SLr'] = $SLr;
+            $this->doMatchPhase2($data);
+        
+    }
+    //student-centric matching
+    public function doMatchPhase2($data) {
+        $PLf = $data['PL2'];//student free for all remainder projects
+        $PLc = $data['PL2'];//compromise remainder projects
+        $SL = $data['SLr'];
+        
+        $PLf = $this->doNRMP($PLf,$SL, false);//do free for all
+        $PLc = $this->doNRMP($PLc,$SL, true);//do compromise
+        
+        foreach ($PLf as $p) {//do this for easier time viewing       
+            $p->generateSkillMetaData();
+        }
+        foreach ($PLc as $p) {            
+            $p->generateSkillMetaData();
+        }
+        
+        
+        $data['PLf'] = $PLf;
+        $data['PLc'] = $PLc;
+        
+        $this->load->view('match_results_page', $data);
+    }
+    //match via national residency matching program (NRMP alg)
+    //worst case is O(students * projects)
+    //if compromise true criteria is based on student interest and skill contribution
+    //else only on student interest
+    public function doNRMP($PL,$SL, $compromise) {
+        
+        $matching = $SL;//students undergoing matching by 
+        $unmatched = array();
+        
+        while(!empty($matching)){//while more to match
+            foreach($matching as $key => $s){ //for each matching
+            
+                for($i = $s->traversal; $i < count($s->iProjList); $i++){//traverse student project list
+                    $ps = $s->iProjList[$i];
+                    $s->traversal = $i+ 1;//save increment before anything else
+                    $matching[$key]->traversal = $i +1;
+                    if(!array_key_exists($ps->id, $PL)){//if project considered not in PL at this point try next
+                        continue;
+                    }
+                    
+                    $p = $PL[$ps->id];
+                    if($p->filled()){//if filled
+                        $sw =  $p->getWorst($compromise);
+                        if($p -> betterFit($s,$sw,$compromise)){//check if s better than sw given compromise then replace
+                            unset($matching[$key]);//unset better fit
+                            array_push($matching, $sw);//reset worst fit
+                            continue 3;//continue to next student needing matching
+                        }
+                    }
+                    else{
+                        unset($matching[$key]);//unset matched student
+                        $p->addDesiredStudent($s); //add since there's space
+                        continue 3;//continue to next student needing matching
+                    }
+                }
+                unset($matching[$key]);//if everything traversed s could not be matched
+                array_push($unmatched, $s);//push to unmatched
+            }
+        }
+        return $PL;
+    }
+    
+    public function getRelaventSkillData($SL,$sb){
+        foreach($SL as $s){
+            $s->relevant = array_intersect($sb, $s->skills);
+        }
+        return $SL;
+    }
+    
+    public function backTracking($SL,$sb,$pos){
+            $check = ceil(floatval(array_count_values($sb))/floatval($pos));
+            static $checked = array();
+            static $bestTeam = array();
+            static $globalPos = null;
+            static $currentTeam = array();
+            static $fulfilled = 0;
+            static $originalReq = array();
+            if($globalPos == null){
+                $globalPos = $pos;$originalReq = $sb;
+            }
+            $SL = $this->getRelaventSkillData($SL,$sb);
+            usort($SL, 'compare_students');
+            
+            foreach($SL as $s){
+                if(isset($bestTeam) && array_count_values($bestTeam) != $$globalPos){
+                    if($this->pruneSkillAmount($check, array_count_values($s->relevant))){
+                        break;
+                    }
+                    elseif($this->pruneSkillCopy($s->relevant,$checked)){
+                        continue;
+                    }
+                }
+                $id = " ";
+                foreach($s->relevant as $sk){
+                    $id .= $sk;
+                }
+                
+                $checked[$id] = 1;//id will now exist in checked skill combo array
+                
+                if($pos != 1){
+                    array_push($currentTeam, $s);
+                    unset($SL[$s->id]);
+                    $this->backTracking($SL,  array_diff($sb, $s->relevant),$pos-1);
+                }
+                else{
+                    $bestTeam = $this->findBestTeam($bestTeam,$currentTeam,$fulfilled);
+                    if($fulfilled == array_count_values($originalReq)){
+                        break;
+                    }
+                }
+                
+            }
+            array_pop($currentTeam);
+            return $bestTeam;
+            
+    }
+    
+    public function findBestTeam($currentBest,$currentTeam,$or){
+        $cbnum = 0;
+        $ctnum = 0;
+        $a = array();
+        $b = array();
+        foreach($currentBest as $cb){
+            array_unique(array_merge($a,  $cb->relevant));
+        }
+        foreach($currentTeam as $ct){
+            array_unique(array_merge($a,  $ct->relevant));
+        }
+        $an = array_count_values($a);
+        $bn = array_count_values($b);
+        if($an< $bn){
+            $or = $bn;
+            return $currentTeam;
+        }
+        return $bestTeam;
+    }
+    
+    public function pruneSkillCopy($rel,$checked) {
+        $id = " ";
+        foreach($rel as $skill){
+            $id .= $skill;
+        }
+        if(array_key_exists($id, $checked)){
+            return true;
+        }
+        return false;
+    }
+    public function pruneSkillAmount($check,$skillAmount) {
+        if($check > $skillAmount){
+            return true;
+        }
+        return false;
+    }
+    
     public function doMatch() {
 
 //        set_time_limit(0);
