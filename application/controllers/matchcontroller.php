@@ -289,6 +289,10 @@ function calculateSkillPercent($p,$s){
     $diff = array_diff($pSkills, $sSkills);
     $intersect = array_diff($pSkills,$diff);
     
+    if(count($pSkills)==0){
+        return 100;
+    }
+    
     return round(100*(count($intersect)/count($pSkills)));
 }
 
