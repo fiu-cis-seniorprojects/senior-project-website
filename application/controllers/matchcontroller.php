@@ -148,6 +148,9 @@ class Project {
         sort($this->fulfilledSkills);
     }
     public function calculateAvgInterest() {
+        if(count($this->desiredStudents)==0){
+            return 0;
+        }
         $avg = 0;
         foreach ($this->desiredStudents as $s) {
             $avg = $s->scoreList[$this->id] + $avg;
@@ -156,9 +159,16 @@ class Project {
         
     }
     public function calculateTotalFulfillment() {
+        if(count($this->skills)==0){
+            return 100;
+        }
+        
         return round(100*(count($this->fulfilledSkills)/count($this->skills)));
     }
     public function calculateAvgFulfillment() {
+        if(count($this->desiredStudents)==0){
+            return 0;
+        }
         $avg = 0;
         foreach ($this->desiredStudents as $s) {
             $avg = $this->figureSkillContribution($s) + $avg;
@@ -166,6 +176,11 @@ class Project {
         return round($avg/count($this->desiredStudents));
     }
     public function figureSkillContribution($s){
+        
+        if(count($this->skills)==0){
+            return 100;
+        }
+        
         $diff = array_diff($this->skills, $s->skills);
         $diff2 = array_diff($this->skills, $diff);
         
