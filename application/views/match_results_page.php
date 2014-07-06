@@ -145,7 +145,11 @@
              echo ' ';
          }
          
-         echo '<br><h5>Students Added:</h5>';
+         echo '<br><h5>Students Added:(';
+         echo count($p->desiredStudents);
+         echo ' out of ';
+         echo $p->max;
+         echo ')</h5>';
          foreach($p->desiredStudents as $s){
              echo '<h6>';
              echo $s->name;
@@ -212,7 +216,11 @@
              echo ' ';
          }
          
-         echo '<br><h5>Students Added:</h5>';
+         echo '<br><h5>Students Added:(';
+         echo count($p->desiredStudents);
+         echo ' out of ';
+         echo $p->max;
+         echo ')</h5>';
          foreach($p->desiredStudents as $s){
              echo '<h6>';
              echo $s->name;

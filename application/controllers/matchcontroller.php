@@ -68,13 +68,13 @@ class Project {
         
         if($compromise){//percent more important than score
             if($sPercent == $swPercent){
-                return $sScore <= $swScore;
+                return $sScore < $swScore;
             }
             return $sPercent < $swPercent;
         }
         else{//vice vera
             if($sScore == $swScore){
-                return $sPercent <= $swPercent;
+                return $sPercent < $swPercent;
             }
             return $sScore < $swScore;
         }
@@ -102,13 +102,6 @@ class Project {
         
         if(!$this->evaluateAsWorse($s,$sw,$compromise)){//if not worse
             
-            foreach ($this->desiredStudents as $key => $value) {
-                if($value->id == $sw->id){
-                    unset($this->desiredStudents[$key]);
-                }
-            }
-            
-            array_push($this->desiredStudents, $s);
             return true;//remove sw put in s, return true s is better fit
         }
         return false;//s not better fit
@@ -118,6 +111,12 @@ class Project {
     //is filled?
     public function filled() {
         return (count($this->desiredStudents) == $this->max);
+    }
+    public function addStudent($s) {
+        $this->desiredStudents[$s->id] = $s;
+    }
+    public function removeStudent($s) {
+        unset($this->desiredStudents[$s->id]);
     }
 
     public function addDesiredStudent(Student $studentToAdd) {
@@ -284,14 +283,16 @@ function compare_student_project($a,$b) {
 
 //calculate the amount of skills students have for project over skills for project as percentage
 function calculateSkillPercent($p,$s){
+    
     $pSkills = $p->skills;
+    if(count($pSkills)==0){
+        return 100;
+    }
     $sSkills = $s->skills;
     $diff = array_diff($pSkills, $sSkills);
     $intersect = array_diff($pSkills,$diff);
     
-    if(count($pSkills)==0){
-        return 100;
-    }
+    
     
     return round(100*(count($intersect)/count($pSkills)));
 }
@@ -779,41 +780,57 @@ class MatchController extends CI_Controller {
         $this->load->view('match_results_page', $data);
     }
     //match via national residency matching program (NRMP alg)
-    //worst case is O(students * projects)
+    //worst case is O(students * projects) more or less
     //if compromise true criteria is based on student interest and skill contribution
     //else only on student interest
     public function doNRMP($PL,$SL, $compromise) {
         
-        $matching = $SL;//students undergoing matching by 
+        foreach ($SL as $value) {
+            $matching[$value->id] = $value;
+        }
+        
         $unmatched = array();
         
         while(!empty($matching)){//while more to match
-            foreach($matching as $key => $s){ //for each matching
+            foreach($matching as $s){ //for each matching
             
                 for($i = $s->traversal; $i < count($s->iProjList); $i++){//traverse student project list
                     $ps = $s->iProjList[$i];
                     $s->traversal = $i+ 1;//save increment before anything else
-                    $matching[$key]->traversal = $i +1;
+                    
+                    if($s->name == 'Filip Panovski' && ($ps->name == "Data Mining and Reporting System for Venture Hive's Company and Entrepreneur Data"||$ps->name == "Human Hand Movement Visualization")){
+                        $s = $s;
+                    }
+                    
+                    $matching[$s->id]->traversal = $i +1;
                     if(!array_key_exists($ps->id, $PL)){//if project considered not in PL at this point try next
-                        continue;
+                        continue 2;
                     }
                     
                     $p = $PL[$ps->id];
                     if($p->filled()){//if filled
                         $sw =  $p->getWorst($compromise);
+                        
                         if($p -> betterFit($s,$sw,$compromise)){//check if s better than sw given compromise then replace
-                            unset($matching[$key]);//unset better fit
-                            array_push($matching, $sw);//reset worst fit
-                            continue 3;//continue to next student needing matching
+                            unset($matching[$s->id]);//unset better fit
+                            $matching[$sw->id] = $sw;//reset worst fit
+                            $p->removeStudent($sw);
+                            $p->addStudent($s);
+                            
+                        if($s->name == 'Filip Panovski'){
+                            $sw = $sw;
+                        }
+                            
+                            continue 2;//continue to next student needing matching
                         }
                     }
                     else{
-                        unset($matching[$key]);//unset matched student
-                        $p->addDesiredStudent($s); //add since there's space
-                        continue 3;//continue to next student needing matching
+                        unset($matching[$s->id]);//unset matched student
+                        $p->addStudent($s); //add since there's space
+                        continue 2;//continue to next student needing matching
                     }
                 }
-                unset($matching[$key]);//if everything traversed s could not be matched
+                unset($matching[$s->id]);//if everything traversed s could not be matched
                 array_push($unmatched, $s);//push to unmatched
             }
         }
