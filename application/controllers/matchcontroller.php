@@ -202,7 +202,7 @@ class Team {
         $this->score = $score;
         $this->skillsNeeded = $skills;
     }
-
+ 
     public function addStudents($students) {
         foreach ($students as $s) {
             $this->members[$s->id] = $s;
@@ -759,12 +759,12 @@ class MatchController extends CI_Controller {
     }
     //student-centric matching
     public function doMatchPhase2($data) {
-        $PLf = $data['PL2'];//student free for all remainder projects
-        $PLc = $data['PL2'];//compromise remainder projects
+        $PLf = $this->cloneProjects($data['PL2']);//student free for all remainder projects
+        $PLc = $this->cloneProjects($data['PL2']);//compromise remainder projects
         $SL = $data['SLr'];
         
-        $PLf = $this->doNRMP($PLf,$SL, false);//do free for all
-        $PLc = $this->doNRMP($PLc,$SL, true);//do compromise
+        $PLf = $this->doNRMP($PLf,$this->cloneStudents($SL), false);//do free for all
+        $PLc = $this->doNRMP($PLc,$this->cloneStudents($SL), true);//do compromise
         
         foreach ($PLf as $p) {//do this for easier time viewing       
             $p->generateSkillMetaData();
@@ -793,14 +793,10 @@ class MatchController extends CI_Controller {
         
         while(!empty($matching)){//while more to match
             foreach($matching as $s){ //for each matching
-            
+
                 for($i = $s->traversal; $i < count($s->iProjList); $i++){//traverse student project list
-                    $ps = $s->iProjList[$i];
+                    $ps = $s->iProjList[$i];     
                     $s->traversal = $i+ 1;//save increment before anything else
-                    
-                    if($s->name == 'Filip Panovski' && ($ps->name == "Data Mining and Reporting System for Venture Hive's Company and Entrepreneur Data"||$ps->name == "Human Hand Movement Visualization")){
-                        $s = $s;
-                    }
                     
                     $matching[$s->id]->traversal = $i +1;
                     if(!array_key_exists($ps->id, $PL)){//if project considered not in PL at this point try next
@@ -810,16 +806,12 @@ class MatchController extends CI_Controller {
                     $p = $PL[$ps->id];
                     if($p->filled()){//if filled
                         $sw =  $p->getWorst($compromise);
-                        
-                        if($p -> betterFit($s,$sw,$compromise)){//check if s better than sw given compromise then replace
+                               
+                        if($p -> betterFit($s,$sw,$compromise)){//check if s better than sw given compromise then replace                                                    
                             unset($matching[$s->id]);//unset better fit
                             $matching[$sw->id] = $sw;//reset worst fit
                             $p->removeStudent($sw);
-                            $p->addStudent($s);
-                            
-                        if($s->name == 'Filip Panovski'){
-                            $sw = $sw;
-                        }
+                            $p->addStudent($s);                            
                             
                             continue 2;//continue to next student needing matching
                         }
@@ -1049,6 +1041,24 @@ class MatchController extends CI_Controller {
         $data['doMatch'] = true;
         $data['comb'] = $comb;
         $this->load->view('match_results_page', $data);
+    }
+    //clone old project list to new project list
+    public function cloneProjects($opl) {
+        $npl = array(); //new project list
+        
+        foreach ($opl as $key => $value) {
+            $npl[$key] = clone $value;
+        }
+        return $npl;
+    }
+        //clone old student list to new student list
+    public function cloneStudents($osl) {
+        $nsl = array(); //new project list
+        
+        foreach ($osl as $key => $value) {
+            $nsl[$key] = clone $value;
+        }
+        return $nsl;
     }
 
 }
