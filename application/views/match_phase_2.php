@@ -29,13 +29,13 @@ and open the template in the editor.
         
         <?php $this->load->view("matchmaking_header");?>
      <!--Note: "warning" to make red; "success" for green-->
-     <h1>Other Projects</h1>
-     <h6>Choose one of two versions to proceed for match finalization.</h6>
-     Note: When applicable green means the skill is fulfilled. Orange unfulfilled. Gray unnecessary (hover student to reveal).
+     <h1>Match Phase 2: Other Projects</h1>
+     <h6>Choose one of two versions of the national residency matchmaking process (NRMP) to proceed for match finalization.</h6>
+     Note: When applicable green means the skill is fulfilled. Orange unfulfilled. Gray unnecessary (hover to reveal).
      <table style="width: 1000px">
     <tr>
-        <td> <h2>Friendly Matching :</h2></td>
-        <td> <h2>Compromise Matching :</h2></td>
+        <td> <h2>Friendly NRMP Matching</h2></td>
+        <td> <h2>Compromise NRMP Matching</h2></td>
     </tr>
         <?php
         $PLc = array_values($PLc);
