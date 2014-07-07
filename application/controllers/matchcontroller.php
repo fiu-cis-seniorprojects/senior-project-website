@@ -65,15 +65,28 @@ class Project {
         $swPercent = calculateSkillPercent($this, $sw);
         $sScore = $s->scoreList[$this->id];
         $swScore = $sw->scoreList[$this->id];
+        $sAmount = count($s->skills);
+        $swAmount = count($s->skills);
         
+        //in case of double tie whoever has less skills overall gets in
         if($compromise){//percent more important than score
             if($sPercent == $swPercent){
+                
+                if($sScore == $swScore){
+                    return $sAmount > $swAmount;
+                }
+                
                 return $sScore < $swScore;
             }
             return $sPercent < $swPercent;
         }
         else{//vice vera
             if($sScore == $swScore){
+                
+                if($sPercent == $swPercent){
+                    return $sAmount > $swAmount;
+                }
+                
                 return $sPercent < $swPercent;
             }
             return $sScore < $swScore;
@@ -268,6 +281,16 @@ function compare_students($a,$b){//ERROR maybe
 function compare_student_project($a,$b) {
     
     if($a->studScore == $b->studScore){
+        
+        if(count($a->skills) == 0 && count($b->skills)==0){//special case to avoid 100% on no skill projects
+            return 0;
+        }
+        elseif (count($a->skills) == 0) {
+            return -1;
+        }
+        elseif (count($b->skills) == 0) {
+            return 1;
+        }
         
         if($a->studSkillPercent == $b->studSkillPercent){
             return 0;
@@ -659,6 +682,46 @@ class MatchController extends CI_Controller {
         $this->load->view('project_priority_page', $data);
         }
     }
+    
+    /*
+     * Generate random student data for testing purposes. This function takes
+     * real students/project and generates random scoring for projects by students
+     * random declartion of students as wildcard etc
+     */
+    public function generateDemoData($PL,$SL,$min) {
+        $skillBank =array();
+        foreach ($PL as $p){
+            foreach ($p->skills as $s) {
+                array_push($skillBank, $s);
+            }
+        }
+        foreach($SL as $s){
+            $wildcard = mt_rand(1, 100);
+            $skillAmount = mt_rand(1,25);
+            
+            if($wildcard < 11){               
+                foreach ($PL as $v) {
+                        $s->scoreList[$v->id] = -1;
+                }
+            }
+            else{
+                foreach ($PL as $v) {
+                        $s->scoreList[$v->id] = mt_rand(-1, 100);
+                }
+            }
+            foreach ($skillBank as $skill){
+                if(mt_rand(1, 100) < 11){
+                    array_push($s->skills,$skill);
+                    if(count($s->skills) > $skillAmount){
+                        break;
+                    }
+                }
+            }
+            
+        }
+        return $SL;
+        
+    }
     //Prepare database data  to data for matchmaking V4
     public function preProcessSteps() {
         // PREPARE PROJECTS
@@ -667,6 +730,8 @@ class MatchController extends CI_Controller {
         $SL = $this->prepareStudents();
         //minimum projects a student should have ranked
         $min = $this->spw_match_model->getMinimum();
+        
+        $SL = $this->generateDemoData($PL,$SL,$min);
         
         $VIP = array();//very important projects
         $PPL = array();//processed project list
@@ -694,12 +759,11 @@ class MatchController extends CI_Controller {
                     $s->scoreList[$p->id] = 1;//wildcard students don't have opinions
                 }                
             }
-            else{//else save student score for project p in s and project compatabiltiy
-                foreach($s->projList as $p){
+            foreach($s->projList as $p){
                     $p->studScore = $s->scoreList[$p->id];
                     $p->studSkillPercent = round(calculateSkillPercent($p,$s));
-                }
             }
+      
             $s->iProjList = $s->projList;
             usort($s->iProjList, 'compare_student_project');
             $s->iProjList = array_values($s->iProjList);//iterative project list
@@ -724,7 +788,7 @@ class MatchController extends CI_Controller {
         
         //$SL = $this->
         
-        $this->doMatchPhase1($VIP, $SL, $PPL);
+        $this->doMatchPhase1($VIP, $PSL, $PPL);
         
         //pass to doMatch but for demonstation do this
         //$this->load->view('match_results_page', $data);
@@ -777,7 +841,7 @@ class MatchController extends CI_Controller {
         $data['PLf'] = $PLf;
         $data['PLc'] = $PLc;
         
-        $this->load->view('match_results_page', $data);
+        $this->load->view('match_phase_2', $data);
     }
     //match via national residency matching program (NRMP alg)
     //worst case is O(students * projects) more or less
@@ -826,6 +890,8 @@ class MatchController extends CI_Controller {
                 array_push($unmatched, $s);//push to unmatched
             }
         }
+        $word = $compromise."unmatched";
+        $_SESSION[$word] = $unmatched;
         return $PL;
     }
     

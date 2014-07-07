@@ -8,7 +8,9 @@ and open the template in the editor.
 <?php $this->load->view("template_header"); ?>
     <h3>Welcome to the Senior Project Website Project Priority Page!</h3>
     <p>Here you set the priorities of current projects.</p>
-    <p>As a reminder, projects with the rank "0" will not be considered in the matching algorithm!!!</p>
+    <p>As a reminder, projects with the rank "0" or less will not be considered in the matching algorithm.</p>
+    <p>Projects ranked "1" will be considered as not important to you.</p>
+    <p>Projects above "1" will be going intensive matching for optimality and are considered VIP (very important projects).</p>
     <hr>
     <?php
     echo form_open('match/saveRank', array(
