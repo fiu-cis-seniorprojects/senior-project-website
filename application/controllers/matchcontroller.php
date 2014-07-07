@@ -286,10 +286,10 @@ function compare_student_project($a,$b) {
             return 0;
         }
         elseif (count($a->skills) == 0) {
-            return -1;
+            return 1;
         }
         elseif (count($b->skills) == 0) {
-            return 1;
+            return -1;
         }
         
         if($a->studSkillPercent == $b->studSkillPercent){
@@ -840,6 +840,9 @@ class MatchController extends CI_Controller {
         
         $data['PLf'] = $PLf;
         $data['PLc'] = $PLc;
+        
+       //var_dump($SL);
+       //var_dump($data['PL2']);
         
         $this->load->view('match_phase_2', $data);
     }
