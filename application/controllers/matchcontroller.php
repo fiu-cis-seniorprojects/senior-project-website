@@ -29,6 +29,21 @@ class Student {
 
 }
 
+//class to record a project list's metadata in order to report match consequence
+class ProjectListMetaData{
+    public $avgInterest;
+    public $avgTotalSkill;
+    public $avgAvgFulfillment;
+    public $totalOverflow;
+    
+    public function __construct($interest,$totalS,$avg,$totalO) {
+        $this->avgAvgFulfillment = $avg;
+        $this->avgInterest = $interest;
+        $this->totalOverflow = $totalO;
+        $this->avgTotalSkill = $totalS;
+    }
+}
+
 class Project {
 
     public $id;
@@ -186,6 +201,13 @@ class Project {
             $avg = $this->figureSkillContribution($s) + $avg;
         }
         return round($avg/count($this->desiredStudents));
+    }
+    public function calculateTotalOverflow() {
+        $total = 0;
+        foreach ($this->desiredStudents as $s){
+            $total += count($s->overflowSkills);
+        }
+        return $total;
     }
     public function figureSkillContribution($s){
         
@@ -813,38 +835,61 @@ class MatchController extends CI_Controller {
             $SLr = $SL;//temporary should be reduced student list 
             
             //should load view to new match page 
-            $data['VIPf'] = $VIPf;
-            $data['VIPs'] = $VIPs;
-            $data['PL2'] = $PL2;
-            $data['SL'] = $SL;
-            $data['SLr'] = $SLr;
-            $this->doMatchPhase2($data);
+            $_SESSION['VIPf'] = $VIPf;
+            $_SESSION['VIPs'] = $VIPs;
+            $_SESSION['PL2'] = $PL2;
+            $_SESSION['SL'] = $SL;
+            $_SESSION['SLr'] = $SLr;
+            $this->doMatchPhase2();
         
     }
     //student-centric matching
-    public function doMatchPhase2($data) {
-        $PLf = $this->cloneProjects($data['PL2']);//student free for all remainder projects
-        $PLc = $this->cloneProjects($data['PL2']);//compromise remainder projects
-        $SL = $data['SLr'];
+    public function doMatchPhase2() {
+        $PLf = $this->cloneProjects($_SESSION['PL2']);//student free for all remainder projects
+        $PLc = $this->cloneProjects($_SESSION['PL2']);//compromise remainder projects
+        $SL = $_SESSION['SLr'];
         
         $PLf = $this->doNRMP($PLf,$this->cloneStudents($SL), false);//do free for all
         $PLc = $this->doNRMP($PLc,$this->cloneStudents($SL), true);//do compromise
+        $PLcMD = new ProjectListMetaData(0, 0, 0, 0);
+        $PLfMD = new ProjectListMetaData(0, 0, 0, 0);
         
         foreach ($PLf as $p) {//do this for easier time viewing       
             $p->generateSkillMetaData();
+            $PLfMD->avgInterest += $p->calculateAvgInterest();
+            $PLfMD->avgAvgFulfillment+= $p->calculateAvgFulfillment();
+            $PLfMD->avgTotalSkill+= $p->calculateTotalFulfillment();
+            $PLfMD->totalOverflow+= $p->calculateTotalOverflow();
         }
+        if(count($PLf) > 0){
+            $PLfMD->avgInterest = round($PLfMD->avgInterest/count($PLf));
+            $PLfMD->avgAvgFulfillment = round($PLfMD->avgAvgFulfillment/count($PLf));
+            $PLfMD->avgTotalSkill = round($PLfMD->avgTotalSkill/count($PLf));
+        }
+        
         foreach ($PLc as $p) {            
             $p->generateSkillMetaData();
+            $PLcMD->avgInterest += $p->calculateAvgInterest();
+            $PLcMD->avgAvgFulfillment+= $p->calculateAvgFulfillment();
+            $PLcMD->avgTotalSkill+= $p->calculateTotalFulfillment();
+            $PLcMD->totalOverflow+= $p->calculateTotalOverflow();
+        }
+        if(count($PLc) > 0){
+            $PLcMD->avgInterest = round($PLcMD->avgInterest/count($PLc));
+            $PLcMD->avgAvgFulfillment = round($PLcMD->avgAvgFulfillment/count($PLc));
+            $PLcMD->avgTotalSkill = round($PLcMD->avgTotalSkill/count($PLc));
         }
         
         
-        $data['PLf'] = $PLf;
-        $data['PLc'] = $PLc;
+        $_SESSION['PLf'] = $PLf;
+        $_SESSION['PLc'] = $PLc;
+        $_SESSION['PLfMD'] = $PLfMD;
+        $_SESSION['PLcMD'] = $PLcMD;
         
        //var_dump($SL);
        //var_dump($data['PL2']);
         
-        $this->load->view('match_phase_2', $data);
+        $this->load->view('match_phase_2');
     }
     //match via national residency matching program (NRMP alg)
     //worst case is O(students * projects) more or less

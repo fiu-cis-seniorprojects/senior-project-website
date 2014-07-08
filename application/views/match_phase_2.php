@@ -27,19 +27,35 @@ and open the template in the editor.
             }
         </style>
         
-        <?php $this->load->view("matchmaking_header");?>
+        <?php $this->load->view("matchmaking_header");
+        $MDc = $_SESSION['PLcMD'];
+        $MDf = $_SESSION['PLfMD'];
+        $unmatchedF = $_SESSION["unmatched"];
+        $unmatchedC = $_SESSION["1unmatched"];?>
      <!--Note: "warning" to make red; "success" for green-->
      <h1>Match Phase 2: Other Projects</h1>
      <h6>Choose one of two versions of the national residency matchmaking process (NRMP) to proceed for match finalization.</h6>
      Note: When applicable green means the skill is fulfilled. Orange unfulfilled. Gray unnecessary (hover to reveal).
      <table style="width: 1000px">
     <tr>
-        <td> <h2>Friendly NRMP Matching</h2></td>
-        <td> <h2>Compromise NRMP Matching</h2></td>
+        <td> <h2>Friendly NRMP Matching</h2>
+            <b>Overall Match Data</b><br>
+            Student Average Interest: <?php echo $MDf->avgInterest;?><br>
+        Average Total Skill Fulfillment: <?php echo $MDf->avgTotalSkill;?>%<br>
+        Student Average Fulfillment <?php echo $MDf->avgAvgFulfillment;?>%<br>
+        Total Overflow Skills: <?php echo $MDf->totalOverflow;?><br>
+        Amount of Unmatched Students: <?php echo count($unmatchedF);?> </td>
+        <td> <h2>Compromise NRMP Matching</h2>
+            <b>Overall Match Data</b><br>
+        Student Average Interest: <?php echo $MDc->avgInterest;?><br>
+        Average Total Skill Fulfillment: <?php echo $MDc->avgTotalSkill;?>%<br>
+        Student Average Fulfillment <?php echo $MDc->avgAvgFulfillment;?>%<br>
+        Total Overflow Skills: <?php echo $MDc->totalOverflow;?><br>
+        Amount of Unmatched Students: <?php echo count($unmatchedC);?></td>
     </tr>
         <?php
-        $PLc = array_values($PLc);
-        $PLf = array_values($PLf);
+        $PLc = array_values($_SESSION['PLc']);
+        $PLf = array_values($_SESSION['PLf']);
         
         for($i = 0; $i<count($PLf); $i++){
             echo '<tr>';
@@ -218,44 +234,47 @@ and open the template in the editor.
             echo '</tr>';
         }
         ?>
-    <?php
-    $unmatchedF = $_SESSION["unmatched"];
-    $unmatchedC = $_SESSION["1unmatched"];
-    ?>
-    <tr>
-        <td>
-            <h3>Unmatched Students (Friendly)</h3>
-            <?php
-            if(count($unmatchedF) == 0){
-                echo 'All students matched!';
-            }
-            else{
-                foreach($unmatchedF as $s){
-                    echo $s->name;
-                    echo "<br>";
-                }
-            }
-            
-            ?>
-        </td>
-        <td>
-            <h3>Unmatched Students (Compromise)</h3>
-            <?php
-            if(count($unmatchedC) == 0){
-                echo 'All students matched!';
-            }
-            else{
-                foreach($unmatchedC as $s){
-                    echo $s->name;
-                    echo "<br>";
-                }
-            }
-            
-            ?>
-        </td>
-    </tr>
      
+     </table><br>
+     <table style="width: 1000px">
+         <tr>
+             <td>            
+                 <h3>Unmatched Students (Friendly)</h3>
+                <?php
+                if(count($unmatchedF) == 0){
+                    echo 'All students matched!';
+                }
+                else{
+                    foreach($unmatchedF as $s){
+                        echo $s->name;
+                        echo "<br>";
+                    }
+                }
+            ?></td>
+             <td>            
+                <h3>Unmatched Students (Compromise)</h3>
+                <?php
+                if(count($unmatchedC) == 0){
+                    echo 'All students matched!';
+                }
+                else{
+                    foreach($unmatchedC as $s){
+                        echo $s->name;
+                        echo "<br>";
+                    }
+                }
+
+                ?>
+             </td>
+         </tr>
      </table>
+     
+     <br><b>Choose one of the two match results and proceed. Compromised is default.</b>
+     <form>
+         <input type="radio" name="OtherProject" value="friendly" >Friendly
+         <input type="radio" name="OtherProject" value="compromise" checked="true">Compromise
+     </form>
+     <?php// $_SESSION['otherProjectState']= $_POST["OtherProject"];?>
     <?php $this->load->view("template_footer"); ?>
     </body>
 </html>
