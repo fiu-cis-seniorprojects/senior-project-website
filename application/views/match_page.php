@@ -39,7 +39,7 @@
             $('#runmatch').click(function(event) {
                 $('#area').empty(); 
                 document.getElementById("progress").style.display = "block";
-                $.post("match/preProcessSteps") 
+                $.post("match/matchStart") 
                    
                         .done(function(data) {
                             //alert("Data Loaded: " + data);

@@ -57,6 +57,7 @@ class Project {
     public $studSkillPercent = 0;//student skill percent acheived
     public $missingSkills = array();
     public $fulfilledSkills = array();
+    public $skillAmount = 0;
     public function __construct($id, $name, $skills, $score, $max) {
         $this->id = $id;
         $this->name = $name;
@@ -270,8 +271,15 @@ class TentativeMatch {
 
 //sort by professor score
 function compare_ranks($a, $b) {
-    if ($a->score == $b->score) {
-        return 0;
+    if ($a->score == $b->score) {//sort by prof score first
+        if(count($a->skills) == count($b->skills)){//by skill amount second
+            if($a->max == $b->max){//by number of positions last
+                return 0;
+            }
+            return ($a->max > $b->max) ? -1 : 1;
+        }
+            
+        return(count($a->skills) > count($b->skills)) ? -1 : 1;
     }
     return ($a->score > $b->score) ? -1 : 1;
 }
@@ -314,11 +322,11 @@ function compare_student_project($a,$b) {
             return -1;
         }
         
-        if($a->studSkillPercent == $b->studSkillPercent){
+        if($a->skillAmount == $b->skillAmount){
             return 0;
         }
         
-        return ($a->studSkillPercent < $b->studSkillPercent) ? 1:-1;
+        return ($a->skillAmount < $b->skillAmount) ? 1:-1;
         
     }
     
@@ -539,6 +547,10 @@ class MatchController extends CI_Controller {
             //$belongProjectIdsList = $this->SPW_User_Model->userHaveProjects($user_id);
             return $this->SPW_Project_Summary_View_Model->prepareProjectsDataToShow($user_id, $lProjectsIds, NULL, FALSE);
         }
+    }
+    
+    public function matchStart() {
+        $this->load->view('match_start_page');
     }
 
     public function saveRank() {
@@ -784,6 +796,7 @@ class MatchController extends CI_Controller {
             foreach($s->projList as $p){
                     $p->studScore = $s->scoreList[$p->id];
                     $p->studSkillPercent = round(calculateSkillPercent($p,$s));
+                    $p->skillAmount = count(array_intersect($p->skills,$s->skills));
             }
       
             $s->iProjList = $s->projList;
@@ -819,8 +832,8 @@ class MatchController extends CI_Controller {
 
     //VIP matching V4
     public function doMatchPhase1($PL, $SL, $PL2){
-            $VIPf = $PL;//VIP project to have friendly result
-            $VIPs = $PL;//VIP project to have scientific result
+            $VIPf = $this->cloneProjects($PL);//VIP project to have friendly result
+            $VIPs = $this->cloneProjects($PL);//VIP project to have scientific result
             unset($PL); //destroy
             /*Eventually do VIPf and VIPs
              * foreach($PL as $p){
