@@ -73,6 +73,9 @@ and open the template in the editor.
             echo '<b>Student Average Fulfillment: ';
             echo $PLf[$i]->calculateAvgFulfillment();
             echo '%</b><br>';
+            echo '<b>Student Total Overflow Skills:';
+            echo $PLf[$i]->calculateTotalOverflow();
+            echo '</b><br>';
             echo '<b>Skill Fulfillment Data:</b><br>';
             foreach ($PLf[$i]->fulfilledSkills as $s) {
                 echo '<li class="label label-success skill">';
@@ -160,6 +163,9 @@ and open the template in the editor.
             echo '<b>Student Average Fulfillment: ';
             echo $PLc[$i]->calculateAvgFulfillment();
             echo '%</b><br>';
+            echo '<b>Student Total Overflow Skills:';
+            echo $PLc[$i]->calculateTotalOverflow();
+            echo '</b><br>';
             echo '<b>Skill Fulfillment Data:</b><br>';
             foreach ($PLc[$i]->fulfilledSkills as $s) {
                 echo '<li class="label label-success skill">';
