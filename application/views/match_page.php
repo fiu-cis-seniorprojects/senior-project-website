@@ -38,12 +38,12 @@
         <script>
             $('#runmatch').click(function(event) {
                 $('#area').empty(); 
-                document.getElementById("progress").style.display = "block";
+                //document.getElementById("progress").style.display = "block";
                 $.post("match/matchStart") 
                    
                         .done(function(data) {
                             //alert("Data Loaded: " + data);
-                           document.getElementById("progress").style.display = "none";
+                           //document.getElementById("progress").style.display = "none";
                             $('#area').html(data);
                         })
                         .fail(function() {

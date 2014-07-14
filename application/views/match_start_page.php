@@ -41,12 +41,13 @@ and open the template in the editor.
                     'onclick' => "send(this.form)"
                 ));
                 ?></div></td>
+            <?php echo form_close() ?>
         <script>
             $('#runmatch1').click(function(event) {
                 $('#area').empty(); 
                 document.getElementById("progress").style.display = "block";
                 $.data('auto','false');
-                $.post("match/preProcessSteps") 
+                $.post("match/gotoManual") 
                    
                         .done(function(data) {
                             //alert("Data Loaded: " + data);
@@ -74,7 +75,7 @@ and open the template in the editor.
             $('#runmatch2').click(function(event) {
                 $('#area').empty(); 
                 document.getElementById("progress").style.display = "block";
-                $.post("match/preProcessSteps") 
+                $.post("match/gotoAuto") 
                    
                         .done(function(data) {
                             //alert("Data Loaded: " + data);

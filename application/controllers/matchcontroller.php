@@ -14,11 +14,13 @@ class Student {
     public $projList = array();//list of project this student wants
     public $PR = array();//PR[id] = project rating for project id
     public $relevant = array();//current relevant skills in a tree
+    public $amountContributing = 0;
     public $traversal = 0; //index of current traversal
     public $iProjList = array();//iterative array for projList
     public $missingSkills = array();//skills student missing in project currently added
     public $fulfilledSkills = array();//skills sutdent has for current project
     public $overflowSkills = array();//skills not contributing to current project
+    public $forced = false;//if student was forced into project
     public function __construct($id, $n, $skills, $scoreList) {
         $this->id = $id;
         $this->name = $n;
@@ -291,19 +293,24 @@ function compare_prof_score($a, $b) {
     return ($a->profScore < $b->profScore) ? 1 : -1;
 }
 function compare_students($a,$b){//ERROR maybe
-    $s1 = array_count_values_ignore_case($a->relevant);
-    $s2 = array_count_values_ignore_case($b->relevant);
-    $s11= array_count_values_ignore_case($a->skills);
-    $s22 = array_count_values_ignore_case($b->skills);
+    $s1 = count($a->relevant);//first critria current relevancy
+    $s2 = count($b->relevant);
+    $s11 = $a->amountContributing;//next criteria total relevancy
+    $s22 = $b->amountContributing;
+    $s111= count($a->skills);//last criteria amount of overflow
+    $s222 = count($b->skills);
     
     if($s1 == $s2){
         if($s11 == $s22){
-            return 0;
+            if($s111==$s222){
+                return 0;
+            }
+            return ($s111 < $s222) ? -1 : 1;//less wasting of skills more prominance
         }
-        return ($s11 < $s22) ? -1 : 1;
+        return ($s11 < $s22) ? 1 : -1;//more total relevant more prominance
     }
     
-    return ($s1 < $s2) ? 1 : -1;
+    return ($s1 < $s2) ? 1 : -1;//more relevant skill higher prominance
 }
 
 //sorting student's projects to traverse their interested in projects
@@ -671,7 +678,7 @@ class MatchController extends CI_Controller {
         $SL = array();
         foreach ($activeStudents as $id) {
             $tempStudent = new Student($id, $studentNames[$id], $this->spw_match_model->getSkillsForStudent($id), $this->spw_match_model->getRanksForStudent($id));
-            array_push($SL, $tempStudent);
+            $SL[$id] = $tempStudent;
         }
         return $SL;//students are id, name, arr skills, arr of ranks [pro id] = rank
     }
@@ -720,7 +727,7 @@ class MatchController extends CI_Controller {
     /*
      * Generate random student data for testing purposes. This function takes
      * real students/project and generates random scoring for projects by students
-     * random declartion of students as wildcard etc
+     * random declartion of students as wildcard random chance to not rank project etc
      */
     public function generateDemoData($PL,$SL,$min) {
         $skillBank =array();
@@ -740,7 +747,12 @@ class MatchController extends CI_Controller {
             }
             else{
                 foreach ($PL as $v) {
+                    if(mt_rand(1, 100) > 25){
                         $s->scoreList[$v->id] = mt_rand(-1, 100);
+                    }
+                    else{
+                        $s->scoreList[$v->id] = -1; 
+                    }
                 }
             }
             foreach ($skillBank as $skill){
@@ -751,13 +763,22 @@ class MatchController extends CI_Controller {
                     }
                 }
             }
+            $s->skills = array_unique($s->skills);
             
         }
         return $SL;
         
     }
+    
+    public function gotoAuto() {
+        $this->preProcessSteps(true);
+    }
+    public function gotoManual() {
+        $this->preProcessSteps(false);
+    }
+    
     //Prepare database data  to data for matchmaking V4
-    public function preProcessSteps() {
+    public function preProcessSteps($auto) {
         // PREPARE PROJECTS
         $PL = $this->prepareProjects();
         //PREPARE STUDENTS
@@ -765,6 +786,9 @@ class MatchController extends CI_Controller {
         //minimum projects a student should have ranked
         $min = $this->spw_match_model->getMinimum();
         
+        
+        //IMPORTANT: Future developers uncomment the following to run test data for students change head prof data manually
+        //change the function if you want to alter randomization details
         $SL = $this->generateDemoData($PL,$SL,$min);
         
         $VIP = array();//very important projects
@@ -822,77 +846,366 @@ class MatchController extends CI_Controller {
         //$data['VIP'] = $VIP;
         
         //$SL = $this->
+        $VIP = array_values($VIP);
+        $_SESSION['VIP'] = $VIP;
+        $_SESSION['PL2'] = $PPL;
+        $_SESSION['SL'] = $PSL;
+        if($auto){
+            $this->doMatchPhase1Auto($VIP, $PSL);
+        }
+        else{
+            $this->doMatchPhase1Manual($VIP, $PSL,0);
+        }
         
-        $this->doMatchPhase1($VIP, $PSL, $PPL);
+    }
+    //helps move things along with view
+    public function matchPhase1Helper() {
+        $index = $_SESSION['indexM'];
+        array_pop($_POST);
+        $studentReturn = $_POST;
         
-        //pass to doMatch but for demonstation do this
-        //$this->load->view('match_results_page', $data);
-       
+        foreach ($studentReturn as $key => $value) {
+            $_SESSION['VIPfinal'][$index-1]->addStudent($this->unsetStudent($_SESSION['SLcombo'],$key));
+        }
+        
+        $this->doMatchPhase1Manual(NULL, NULL, $index);
+    }
+    //unset array value the hard way
+    public function unsetStudent($arr,$id) {
+        $theV = null;
+        foreach ($arr as $key => $value) {
+            if($value->id == $id){
+                $theV = $value;
+                unset($_SESSION['SLcombo'][$key]);
+            }
+        }
+        return $theV;
+    }
+    
+    //VIP match v4 manual
+    public function doMatchPhase1Manual($PL, $SL, $indexM) {
+        
+            if($indexM == 0){//generate start data
+                $VIPf = $this->cloneProjects($PL);//VIP project to have friendly result
+                $VIPs = $this->cloneProjects($PL);//VIP project to have scientific result   
+                $VIPfinal = $this->cloneProjects($PL);
+                $SLf = $this->cloneStudents($SL);
+                $SLs = $this->cloneStudents($SL);
+                $SLcombo = $this->cloneStudents($SL);
+            }
+            else{//load from session
+                $VIPf = $_SESSION['VIPf'];
+                $VIPs = $_SESSION['VIPs'];
+                $VIPfinal = $_SESSION['VIPfinal'];
+                $SLf = $this->cloneStudents($_SESSION['SLcombo']);
+                $SLs = $this->cloneStudents($_SESSION['SLcombo']);
+                $SLcombo = $_SESSION['SLcombo'];
+            }
+            if($indexM == count($VIPf)){
+                //generate metadata here
+                $_SESSION['VIPfinalMD'] = $this->generateMatchMetaData($_SESSION['VIPfinal']);
+                $data['VIPfinalMD'] = $_SESSION['VIPfinalMD'];
+                $data['VIPfinal'] = $_SESSION['VIPfinal'];
+                $this->load->view('match_phase_1_finalize',$data);
+            }
+            else{
+                
+            $pf = $VIPf[$indexM];
+            $ps = $VIPs[$indexM];
+            
+            $pf = $this->doHeuristicMatch(true, $SLf,$pf);
+            $ps = $this->doHeuristicMatch(false, $SLs,$ps);
+            $this->generateProjectMetadata($pf);
+            $this->generateProjectMetadata($ps);
+            $VIPf[$indexM]=$pf;
+            $VIPs[$indexM]=$ps;
+            $indexM++;
+            //should load view to new match page 
+            $_SESSION['VIPfinal'] = $VIPfinal;
+            $_SESSION['VIPf'] = $VIPf;
+            $_SESSION['VIPs'] = $VIPs;
+            $_SESSION['SLcombo'] = $SLcombo;
+            $_SESSION['indexM'] = $indexM;
+            
+            $data['VIPfinal'] = $VIPfinal;
+            $data['VIPf'] = $VIPf;
+            $data['VIPs'] = $VIPs;
+            $data['SLcombo'] = $SLcombo;
+            $data['indexM'] = $indexM;
+            
+            $this->load->view('match_phase_1_manual_progress',$data);
+            }
     }
 
     //VIP matching V4
-    public function doMatchPhase1($PL, $SL, $PL2){
+    public function doMatchPhase1Auto($PL, $SL){
             $VIPf = $this->cloneProjects($PL);//VIP project to have friendly result
             $VIPs = $this->cloneProjects($PL);//VIP project to have scientific result
-            unset($PL); //destroy
-            /*Eventually do VIPf and VIPs
-             * foreach($PL as $p){
-                $team = $this->backtracking($SL,$p->skills,$p->max);
-                foreach($team as $t){
-                    $p->addDesiredStudent($t);
-                }
-            }
-             * Refine SL here for PL2
-             */
+            //unset($PL); //destroy
             
-            $SLr = $SL;//temporary should be reduced student list 
+            $SLf = $this->cloneStudents($SL);
+            $SLs = $this->cloneStudents($SL);
+            
+            foreach ($VIPf as $p) {
+                $p = $this->doHeuristicMatch(true, $SLf,$p);//match p based on current student list
+                $SLf = $this->reduceStudents($SLf, $p);//reduce students in student list based on p's team
+            }
+            
+            foreach ($VIPs as $p) {
+                $p = $this->doHeuristicMatch(false, $SLs,$p);//match p based on current student list
+                $SLs = $this->reduceStudents($SLs, $p);//reduce students in student list based on p's team
+            }
+            
+            $VIPfMD = $this->generateMatchMetaData($VIPf);//vip metadata
+            $VIPsMD = $this->generateMatchMetaData($VIPs);
             
             //should load view to new match page 
             $_SESSION['VIPf'] = $VIPf;
             $_SESSION['VIPs'] = $VIPs;
-            $_SESSION['PL2'] = $PL2;
+            $_SESSION['VIPfMD'] = $VIPfMD;
+            $_SESSION['VIPsMD'] = $VIPsMD;
+            
             $_SESSION['SL'] = $SL;
-            $_SESSION['SLr'] = $SLr;
-            $this->doMatchPhase2();
+            $_SESSION['SLrf'] = $SLf;
+            $_SESSION['SLrc'] = $SLs;
+            $this->load->view('match_phase_1_auto');
         
     }
+    //help move things to match phase 1 confirmation/finalization
+    public function matchPhase1HelperAuto() {
+            
+        if($_POST['VIPchoice'] == 'friendly'){//depending on uer choice which is the true vip
+            $_SESSION['VIPfinal'] = $_SESSION['VIPf'];
+            $_SESSION['SLcombo'] = $_SESSION['SLrf'];
+            $_SESSION['VIPfinalMD'] = $_SESSION['VIPfMD'];
+        }
+        else{
+            $_SESSION['VIPfinal'] = $_SESSION['VIPs'];
+            $_SESSION['SLcombo'] = $_SESSION['SLrc'];
+            $_SESSION['VIPfinalMD'] = $_SESSION['VIPsMD'];          
+        }
+        
+        $data['VIPfinalMD'] = $_SESSION['VIPfinalMD'];
+        $data['VIPfinal'] = $_SESSION['VIPfinal'];
+        $this->load->view('match_phase_1_finalize',$data);
+    }
+    //removes students in p from SL
+    public function reduceStudents($SL, $p) {
+        foreach ($p->desiredStudents as $ds) {
+            foreach ($SL as $k => $s) {
+                if($s->id == $ds->id){
+                    unset($SL[$k]);//could be improved if I make sure $SL listed by ID
+                }
+            }
+        }
+        return $SL;
+    }
+    //Match SL students to project p intesively using only students who wants p (if friendly = true)
+    public function doHeuristicMatch($friendly,$SL, $p) {
+        $trueSL = array();
+        if($friendly){//match on only students that want p
+            foreach ($SL as $s) {
+                if(array_key_exists($p->id, $s->scoreList) && $s->scoreList[$p->id] > 0){
+                    array_push($trueSL, clone $s);//if student wants P put in true list
+                }
+            }
+        }
+        else{
+            $trueSL = $this->cloneStudents($SL);//match on all students
+        }
+        
+        foreach ($trueSL as $s) {//get each students contribution number for comparator
+            $s->amountContributing = count(array_intersect($s->skills, $p->skills));
+        }
+        
+        $team = $this->backTracking($trueSL, $p->skills,$p->max, true);//construct team
+        //add team to p
+        foreach ($team as $t) {
+            $p->addStudent($t);
+        }
+        return $p;
+    }
+    //backtrack algorithmn with Depth first search
+    //student list, remaining skills to fulfill, $current position(i.e. x positions left to fill)
+    public function backTracking($SL,$remain,$pos, $reset) {
+        static $max = 0;
+        static $checked = array();//hash to check for already considered relevancy set
+        static $bestTeam = array();//best team (to compare against
+        static $currTeam = array();//current team
+        static $functionBreak = 0; //if set to 1 BREAK EVERYTHING we found a winner
+        static $oSkills = array();//original skills project p needs
+
+        if($reset){
+            $max = 0;
+            $checked = array();//hash to check for already considered relevancy set
+            $bestTeam = array();//best team (to compare against
+            $currTeam = array();//current team
+            $functionBreak = 0; //if set to 1 BREAK EVERYTHING we found a winner
+            $oSkills = array();//original skills project p needs
+        }
+
+        if($max==0){
+            $max = $pos; //global (within scope) max
+            $bestTeam = array();//precaution
+            $oSkills = $remain;
+        }
+        
+        $qualifier = ceil(count($remain)/$pos);//if student s does not have this amount of relevant skills they and any s afterwards don't qualify for consideration
+        
+        foreach ($SL as $s) {
+            $s->relevant = array_intersect($s->skills, $remain);            
+        }
+        usort($SL, 'compare_students');//sort students based on most likely to be best
+        $nextSL = $this->cloneStudents($SL);
+        $checkIfAddition = 0;//check if added in a round
+        
+        foreach($SL as $k => $s){
+            if(count($bestTeam) != $max){//fill first best team to start with note for first team dupes don't matter
+                array_push($bestTeam, $s);
+                array_push($currTeam, $s);
+                $checkIfAddition=1;
+                //set id
+                $checked[$this->hashSkills($s->relevant)] = 1;
+                //recurse to one less postion and count $s less skills
+                if($pos != 1){
+                    unset($nextSL[$k]); //remove for next position consideration 
+                    $this->backTracking($nextSL, array_diff($remain, $s->relevant), $pos - 1, false);
+                }
+                elseif($this->sucessfulGroup($s, $remain)&& count($bestTeam) == $max){//in case first match is right match CHECK HERE
+                        $functionBreak = 1;
+                }
+                else{
+                    continue;//if pos == 1 then see if next possible teams better
+                }
+            }
+            elseif($this->pruneUnqualified($qualifier,$s)){
+                break;//stop searchign this studentlist, nothing good will come
+            }
+            elseif(count($currTeam) != $max && !$this->pruneDupe($s, $checked)){//if curr team not full fill with s assuming s not duplicate
+                array_push($currTeam, $s);
+                $checkIfAddition=1;
+                $checked[$this->hashSkills($s->relevant)] = 1;
+                
+                if(count($currTeam) == $max){ //if now max
+                    if($this->sucessfulGroup($s, $remain)){//in case match is right match auto best
+                            $functionBreak = 1;$bestTeam = $currTeam;
+                    }
+                    elseif($this->betterMatch($currTeam,$bestTeam,$oSkills)){
+                        $bestTeam = $currTeam;//reconsider the best
+                        break;//last person added exit this consideration
+                    }
+                    else{
+                        break;//last person exit this consideration
+                    }
+                }
+                if($functionBreak != 1){//just in case
+                    unset($nextSL[$k]); //remove for next position consideration 
+                    $this->backTracking($nextSL, array_diff($remain, $s->relevant), $pos - 1, false);    
+                }
+                
+            }
+            
+            if($functionBreak == 1){//break all method stacks
+                $max = 0;//reset the statics? is this necessary?
+                $checked = array();
+                $currTeam = array();
+                $functionBreak = 0; 
+                break;
+            }
+        }
+        
+        array_pop($currTeam);//if going back up one pop last added
+        unset($SL);unset($nextSL);//free memory
+        return $bestTeam;
+    }
+    //see if current team c better than best team b
+    public function betterMatch($c, $b, $oSkills) {
+        $cFulfill = 0;//total team fulfillment
+        $bFulfill = 0;
+        $cTotalR = 0;//total skills going to fulfillment
+        $bTotalR = 0;
+        $cAmount = 0;//total skills even useless ones
+        $bAmount = 0;
+        $cTemp = array();//hold array to check fulfillment
+        $bTemp = array();
+        
+        foreach ($c as $s) {
+            $cTemp = array_unique(array_merge($s->skills, $cTemp));
+            $cTotalR += count(array_intersect($s->skills, $oSkills));
+            $cAmount += count($s->skills);
+        }
+        foreach ($b as $s) {
+            $bTemp = array_unique(array_merge($s->skills, $bTemp));
+            $bTotalR += count(array_intersect($s->skills, $oSkills));
+            $bAmount += count($s->skills);
+        }
+        $cFulfill = count(array_intersect($oSkills,$cTemp));
+        $bFulfill = count(array_intersect($oSkills,$bTemp));
+        
+        if($cFulfill > $bFulfill){
+            return true;//if current team more fulfillment
+        }
+        elseif ($cTotalR > $bTotalR && $cFulfill == $bFulfill) {
+            return true;//if prior check equivement and new team has more skill for project
+        }
+        elseif($cAmount < $bAmount && $cTotalR == $bTotalR && $cFulfill == $bFulfill){
+            return true;//if prior 2 checks equivalent and new team has less wasteful skills
+        }
+        return false;
+        
+    }
+    //if true means the team has been determined to be the best
+    public function sucessfulGroup($s,$remain) {
+        if(count(array_diff($s->skills, $remain))==0){
+            return true;
+        }
+        else{
+            return false;
+        }
+    }
+    //pruning heuristic which does not continue search in a logically duplicate relevancy set
+    public function pruneDupe($s, $checked) {
+        $id = $this->hashSkills($s->relevant);
+        
+        if(array_key_exists($id, $checked)){
+            return true;//yes was consider
+        }
+        else{
+            return false;//no was not considered
+        }
+        
+    }
+    //pruning heuristic which does not continue search in an unqualified remaining list of students
+    //i.e. this student and any after can not possibly improve project
+    public function pruneUnqualified($qualifier,$s){
+        if(count($s->relevant) < $qualifier){
+            return true;//student cannot possibly improve project
+        }
+        else{
+            return false;//possible improver
+        }
+    }
+
+
+    //makes skill list a hashable id works because skills are sorted alphabetically
+    public function hashSkills($skills) {
+        $hashID = " ";
+        foreach ($skills as $s) {
+            $hashID = $hashID.$s;
+        }
+        return $hashID;
+    }
+    
     //student-centric matching
     public function doMatchPhase2() {
         $PLf = $this->cloneProjects($_SESSION['PL2']);//student free for all remainder projects
         $PLc = $this->cloneProjects($_SESSION['PL2']);//compromise remainder projects
-        $SL = $_SESSION['SLr'];
+        $SL = $_SESSION['SLcombo'];
         
         $PLf = $this->doNRMP($PLf,$this->cloneStudents($SL), false);//do free for all
         $PLc = $this->doNRMP($PLc,$this->cloneStudents($SL), true);//do compromise
-        $PLcMD = new ProjectListMetaData(0, 0, 0, 0);
-        $PLfMD = new ProjectListMetaData(0, 0, 0, 0);
-        
-        foreach ($PLf as $p) {//do this for easier time viewing       
-            $p->generateSkillMetaData();
-            $PLfMD->avgInterest += $p->calculateAvgInterest();
-            $PLfMD->avgAvgFulfillment+= $p->calculateAvgFulfillment();
-            $PLfMD->avgTotalSkill+= $p->calculateTotalFulfillment();
-            $PLfMD->totalOverflow+= $p->calculateTotalOverflow();
-        }
-        if(count($PLf) > 0){
-            $PLfMD->avgInterest = round($PLfMD->avgInterest/count($PLf));
-            $PLfMD->avgAvgFulfillment = round($PLfMD->avgAvgFulfillment/count($PLf));
-            $PLfMD->avgTotalSkill = round($PLfMD->avgTotalSkill/count($PLf));
-        }
-        
-        foreach ($PLc as $p) {            
-            $p->generateSkillMetaData();
-            $PLcMD->avgInterest += $p->calculateAvgInterest();
-            $PLcMD->avgAvgFulfillment+= $p->calculateAvgFulfillment();
-            $PLcMD->avgTotalSkill+= $p->calculateTotalFulfillment();
-            $PLcMD->totalOverflow+= $p->calculateTotalOverflow();
-        }
-        if(count($PLc) > 0){
-            $PLcMD->avgInterest = round($PLcMD->avgInterest/count($PLc));
-            $PLcMD->avgAvgFulfillment = round($PLcMD->avgAvgFulfillment/count($PLc));
-            $PLcMD->avgTotalSkill = round($PLcMD->avgTotalSkill/count($PLc));
-        }
-        
+        $PLcMD = $this->generateMatchMetaData($PLc);
+        $PLfMD = $this->generateMatchMetaData($PLf);
         
         $_SESSION['PLf'] = $PLf;
         $_SESSION['PLc'] = $PLc;
@@ -904,6 +1217,32 @@ class MatchController extends CI_Controller {
         
         $this->load->view('match_phase_2');
     }
+    //generates metadata for a project list (aka match)
+    public function generateMatchMetaData($PL){
+        $PLMD = new ProjectListMetaData(0, 0, 0, 0);
+        foreach ($PL as $p) {//do this for easier time viewing       
+            $p->generateSkillMetaData();
+            $PLMD->avgInterest += $p->calculateAvgInterest();
+            $PLMD->avgAvgFulfillment+= $p->calculateAvgFulfillment();
+            $PLMD->avgTotalSkill+= $p->calculateTotalFulfillment();
+            $PLMD->totalOverflow+= $p->calculateTotalOverflow();
+        }
+        if(count($PL) > 0){
+            $PLMD->avgInterest = round($PLMD->avgInterest/count($PL));
+            $PLMD->avgAvgFulfillment = round($PLMD->avgAvgFulfillment/count($PL));
+            $PLMD->avgTotalSkill = round($PLMD->avgTotalSkill/count($PL));
+        }
+        return $PLMD;
+    }
+    //minor function for one by one metadata generation
+    public function generateProjectMetadata($p) {
+        $p->generateSkillMetaData();
+        $p->calculateAvgInterest();
+        $p->calculateAvgFulfillment();
+        $p->calculateTotalFulfillment();
+        $p->calculateTotalOverflow();
+    }
+
     //match via national residency matching program (NRMP alg)
     //worst case is O(students * projects) more or less
     //if compromise true criteria is based on student interest and skill contribution
@@ -955,14 +1294,19 @@ class MatchController extends CI_Controller {
         $_SESSION[$word] = $unmatched;
         return $PL;
     }
-    
+    //for a list of students have their relevant skills be equal to
+    //the skills they have that is also on skill bank
     public function getRelaventSkillData($SL,$sb){
         foreach($SL as $s){
             $s->relevant = array_intersect($sb, $s->skills);
         }
         return $SL;
     }
-    
+    //go from match phase 2 to final show and tell confirmation
+    public function finalizeMatchConfirmation() {
+        
+    }
+    /*
     public function backTracking($SL,$sb,$pos){
             $check = ceil(floatval(array_count_values($sb))/floatval($pos));
             static $checked = array();
@@ -1046,8 +1390,8 @@ class MatchController extends CI_Controller {
             return true;
         }
         return false;
-    }
-    
+    }*/
+    /*//v3 outdated
     public function doMatch() {
 
 //        set_time_limit(0);
@@ -1168,7 +1512,7 @@ class MatchController extends CI_Controller {
         $data['doMatch'] = true;
         $data['comb'] = $comb;
         $this->load->view('match_results_page', $data);
-    }
+    }*/
     //clone old project list to new project list
     public function cloneProjects($opl) {
         $npl = array(); //new project list

@@ -28,34 +28,34 @@ and open the template in the editor.
         </style>
         
         <?php $this->load->view("matchmaking_header");
-        $MDc = $_SESSION['PLcMD'];
-        $MDf = $_SESSION['PLfMD'];
-        $unmatchedF = $_SESSION["unmatched"];
-        $unmatchedC = $_SESSION["1unmatched"];?>
+        $MDc = $_SESSION['VIPsMD'];
+        $MDf = $_SESSION['VIPfMD'];?>
      <!--Note: "warning" to make red; "success" for green-->
-     <h1>Match Phase 2: Other Projects</h1>
-     <h6>Choose one of two versions of the national residency matchmaking process (NRMP) to proceed for match finalization.</h6>
+     <h1>Match Phase 1 (Auto): Very Important Projects(VIP)</h1>
+     <h6>Choose one of two versions of the heuristic VIP matchmaking to proceed for match finalization.</h6>
      Note: When applicable green means the skill is fulfilled. Orange unfulfilled. Gray unnecessary (hover to reveal).
+                  <?php
+            echo form_open('match/matchPhase1HelperAuto', array(
+            'name' => 'VIPchoice',
+            ));?>
      <table style="width: 1000px">
     <tr>
-        <td> <h2>Friendly NRMP Matching</h2>
+        <td> <h2>Friendly Heuristic VIP Matching</h2>
             <b>Overall Match Data</b><br>
-            Student Average Interest: <?php echo $MDf->avgInterest;?><br>
+        Student Average Interest: <?php echo $MDf->avgInterest;?><br>
         Average Total Skill Fulfillment: <?php echo $MDf->avgTotalSkill;?>%<br>
         Student Average Fulfillment <?php echo $MDf->avgAvgFulfillment;?>%<br>
-        Total Overflow Skills: <?php echo $MDf->totalOverflow;?><br>
-        Amount of Unmatched Students: <?php echo count($unmatchedF);?> </td>
-        <td> <h2>Compromise NRMP Matching</h2>
+        Total Overflow Skills: <?php echo $MDf->totalOverflow;?></td>
+        <td> <h2>Scientific Heuristic VIP Matching</h2>
             <b>Overall Match Data</b><br>
         Student Average Interest: <?php echo $MDc->avgInterest;?><br>
         Average Total Skill Fulfillment: <?php echo $MDc->avgTotalSkill;?>%<br>
         Student Average Fulfillment <?php echo $MDc->avgAvgFulfillment;?>%<br>
-        Total Overflow Skills: <?php echo $MDc->totalOverflow;?><br>
-        Amount of Unmatched Students: <?php echo count($unmatchedC);?></td>
+        Total Overflow Skills: <?php echo $MDc->totalOverflow;?></td>
     </tr>
         <?php
-        $PLc = array_values($_SESSION['PLc']);
-        $PLf = array_values($_SESSION['PLf']);
+        $PLc = array_values($_SESSION['VIPs']);
+        $PLf = array_values($_SESSION['VIPf']);
         
         for($i = 0; $i<count($PLf); $i++){
             echo '<tr>';
@@ -64,6 +64,7 @@ and open the template in the editor.
             echo $PLf[$i]->name;
             echo '</h3>';
             echo '';
+            echo "<b>Head Professor's Rating: </b>".$PLf[$i]->score."<br>";
             echo '<b>Student Interest Average: </b>';
             echo $PLf[$i]->calculateAvgInterest();
             echo '<br>';
@@ -73,7 +74,7 @@ and open the template in the editor.
             echo '<b>Student Average Fulfillment: </b>';
             echo $PLf[$i]->calculateAvgFulfillment();
             echo '%<br>';
-            echo '<b>Student Total Overflow Skills: </b>';
+            echo '<b>Student Total Overflow Skills:</b>';
             echo $PLf[$i]->calculateTotalOverflow();
             echo '<br>';
             echo '<b>Skill Fulfillment Data:</b><br>';
@@ -154,6 +155,7 @@ and open the template in the editor.
             echo $PLc[$i]->name;
             echo '</h3>';
             echo '';
+            echo "<b>Head Professor's Rating: </b>".$PLc[$i]->score."<br>";
             echo '<b>Student Interest Average: </b>';
             echo $PLc[$i]->calculateAvgInterest();
             echo '<br>';
@@ -163,7 +165,7 @@ and open the template in the editor.
             echo '<b>Student Average Fulfillment: </b>';
             echo $PLc[$i]->calculateAvgFulfillment();
             echo '%<br>';
-            echo '<b>Student Total Overflow Skills: </b>';
+            echo '<b>Student Total Overflow Skills:</b> ';
             echo $PLc[$i]->calculateTotalOverflow();
             echo '<br>';
             echo '<b>Skill Fulfillment Data:</b><br>';
@@ -241,46 +243,38 @@ and open the template in the editor.
         }
         ?>
      
-     </table><br>
-     <table style="width: 1000px">
-         <tr>
-             <td>            
-                 <h3>Unmatched Students (Friendly)</h3>
-                <?php
-                if(count($unmatchedF) == 0){
-                    echo 'All students matched!';
-                }
-                else{
-                    foreach($unmatchedF as $s){
-                        echo $s->name;
-                        echo "<br>";
-                    }
-                }
-            ?></td>
-             <td>            
-                <h3>Unmatched Students (Compromise)</h3>
-                <?php
-                if(count($unmatchedC) == 0){
-                    echo 'All students matched!';
-                }
-                else{
-                    foreach($unmatchedC as $s){
-                        echo $s->name;
-                        echo "<br>";
-                    }
-                }
-
-                ?>
-             </td>
-         </tr>
      </table>
      
-     <br><b>Choose one of the two match results and proceed. Compromised is default.</b>
-     <form>
-         <input type="radio" name="OtherProject" value="friendly" >Friendly
-         <input type="radio" name="OtherProject" value="compromise" checked="true">Compromise
-     </form>
-     <?php// $_SESSION['otherProjectState']= $_POST["OtherProject"];?>
+     <br><b>Choose one of the two match results and proceed. Friendly is default.</b>
+     <?php
+     
+     $dataF = array(
+       'name' => 'VIPchoice',
+       'id' => 'VIPchoice',
+       'value' => 'friendly',
+       'checked' => true,
+     );
+     $dataS = array(
+       'name' => 'VIPchoice',
+       'id' => 'VIPchoice',
+       'value' => 'scientific',
+     );
+     
+        echo form_radio($dataF);
+        echo "Friendly  ";
+        echo form_radio($dataS);
+        echo "Scientific";
+     ?>
+     <?php                               
+                echo form_submit(array(
+                    'id' => 'match phase 1 helper auto',
+                    'name' => 'match phase 1 helper auto',
+                    'type' => 'Submit',
+                    'class' => 'btn btn-primary btn-small pull-left',
+                    'value' => 'Goto Match Phase 1 Finalization',
+                ));
+                ?><br>
+     <?php echo form_close();// $_SESSION['otherProjectState']= $_POST["OtherProject"];?>
     <?php $this->load->view("template_footer"); ?>
     </body>
 </html>
