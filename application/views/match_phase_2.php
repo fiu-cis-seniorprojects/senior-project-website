@@ -25,7 +25,34 @@ and open the template in the editor.
             table{
                 table-layout: fixed;
             }
+            div.studentData{
+                display: none;
+            }
+            
         </style>
+        <script>
+                        
+                function regionalStudFunction(obj){
+                    
+                    if($("div[class*=studentData][id="+ $(obj).attr("id") +"]").css("display") != "none"){
+                        $("div[class*=studentData][id="+ $(obj).attr("id") +"]").css("display","none");
+                    }
+                    else{
+                        $("div[class*=studentData][id="+ $(obj).attr("id") +"]").css("display","block");
+                    }
+                };
+                
+                function globalStudFunction(){
+                    
+                    if($("div[class*=studentData]").css("display") != "none"){
+                        $("div[class*=studentData]").css("display","none");
+                    }
+                    else{
+                        $("div[class*=studentData]").css("display","block");
+                    }
+                };
+           
+        </script>
         
         <?php $this->load->view("matchmaking_header");
         $MDc = $_SESSION['PLcMD'];
@@ -36,6 +63,11 @@ and open the template in the editor.
      <h1>Match Phase 2: Other Projects</h1>
      <h6>Choose one of two versions of the national residency matchmaking process (NRMP) to proceed for match finalization.</h6>
      Note: When applicable green means the skill is fulfilled. Orange unfulfilled. Gray unnecessary (hover to reveal).
+            <?php
+            echo form_open('match/matchFinalizeHelper', array(
+            'name' => 'Otherchoice',
+            ));?>
+          <button type="button" id="s" class="globalStud" onclick="globalStudFunction()">Show/Hide All Students</button><br>
      <table style="width: 1000px">
     <tr>
         <td> <h2>Friendly NRMP Matching</h2>
@@ -93,8 +125,9 @@ and open the template in the editor.
             echo '<br><h5>Students Added:(';
             echo count($PLf[$i]->desiredStudents);
             echo ' out of ';
-            echo $PLf[$i]->max;
-            echo ')</h5>';
+            echo $PLf[$i]->max;            
+            echo ')   <button type="button" id="s'.$i .'" class="regionalStud" onclick="regionalStudFunction(this)">Show/Hide Students</button></h5>';
+            echo '<div id="s'.$i.'" class="studentData">';
             foreach($PLf[$i]->desiredStudents as $s){
                 echo '<h6>';
                 echo $s->name;
@@ -147,6 +180,7 @@ and open the template in the editor.
 
                echo '<br>';
             }
+            echo '</div>';
             echo '</td>';
             
             echo '<td>';
@@ -184,7 +218,8 @@ and open the template in the editor.
             echo count($PLc[$i]->desiredStudents);
             echo ' out of ';
             echo $PLc[$i]->max;
-            echo ')</h5>';
+            echo ')   <button type="button" id="s'.$i.'" class="regionalStud" onclick="regionalStudFunction(this)">Show/Hide Students</button></h5>';
+            echo '<div id="s'.$i.'" class="studentData">';
             foreach($PLc[$i]->desiredStudents as $s){
                 echo '<h6>';
                 echo $s->name;
@@ -236,6 +271,7 @@ and open the template in the editor.
 
                echo '<br>';
             }
+            echo '</div>';
             echo '</td>';
             echo '</tr>';
         }
@@ -276,10 +312,35 @@ and open the template in the editor.
      </table>
      
      <br><b>Choose one of the two match results and proceed. Compromised is default.</b>
-     <form>
-         <input type="radio" name="OtherProject" value="friendly" >Friendly
-         <input type="radio" name="OtherProject" value="compromise" checked="true">Compromise
-     </form>
+          <?php
+     
+     $dataF = array(
+       'name' => 'Otherchoice',
+       'id' => 'Otherchoice',
+       'value' => 'friendly',
+       'checked' => true,
+     );
+     $dataS = array(
+       'name' => 'Otherchoice',
+       'id' => 'Otherchoice',
+       'value' => 'compromise',
+     );
+     
+        echo form_radio($dataF);
+        echo "Friendly  ";
+        echo form_radio($dataS);
+        echo "Compromise";
+     ?>
+          <?php                               
+                echo form_submit(array(
+                    'id' => 'match finalize helper',
+                    'name' => 'match finalize helper',
+                    'type' => 'Submit',
+                    'class' => 'btn btn-primary btn-small pull-left',
+                    'value' => 'Goto Match Finalization',
+                ));
+                ?><br>
+     <?php echo form_close();// $_SESSION['otherProjectState']= $_POST["OtherProject"];?>
      <?php// $_SESSION['otherProjectState']= $_POST["OtherProject"];?>
     <?php $this->load->view("template_footer"); ?>
     </body>

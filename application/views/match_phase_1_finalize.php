@@ -26,7 +26,33 @@ and open the template in the editor.
             table{
                 table-layout: fixed;
             }
+            div.studentData{
+                display: none;
+            }
         </style>
+        <script>
+                        
+                function regionalStudFunction(obj){
+                    
+                    if($("div[class*=studentData][id="+ $(obj).attr("id") +"]").css("display") != "none"){
+                        $("div[class*=studentData][id="+ $(obj).attr("id") +"]").css("display","none");
+                    }
+                    else{
+                        $("div[class*=studentData][id="+ $(obj).attr("id") +"]").css("display","block");
+                    }
+                };
+                
+                function globalStudFunction(){
+                    
+                    if($("div[class*=studentData]").css("display") != "none"){
+                        $("div[class*=studentData]").css("display","none");
+                    }
+                    else{
+                        $("div[class*=studentData]").css("display","block");
+                    }
+                };
+           
+        </script>
         
         <?php $this->load->view("matchmaking_header");
         $MDf = $_SESSION['VIPfinalMD'];?>
@@ -36,6 +62,7 @@ and open the template in the editor.
      Note: When applicable green means the skill is fulfilled. Orange unfulfilled. Gray unnecessary (hover to reveal).
                   <?php
             echo form_open('match/doMatchPhase2');?>
+     <button type="button" id="s" class="globalStud" onclick="globalStudFunction()">Show/Hide All Students</button><br>
      <table style="width: 1000px">
     <tr>
         <td> <h2>VIP Matching Final Details</h2>
@@ -87,7 +114,8 @@ and open the template in the editor.
             echo count($PLf[$i]->desiredStudents);
             echo ' out of ';
             echo $PLf[$i]->max;
-            echo ')</h5>';
+            echo ')   <button type="button" id="s'.$i.'" class="regionalStud" onclick="regionalStudFunction(this)">Show/Hide Students</button></h5>';
+            echo '<div id="s'.$i.'" class="studentData">';
             foreach($PLf[$i]->desiredStudents as $s){
                 echo '<h6>';
                 echo $s->name;
@@ -140,12 +168,14 @@ and open the template in the editor.
 
                echo '<br>';
             }
+            echo '</div>';
             echo '</td>';
             echo '</tr>';
         }
         ?>
      
      </table>
+
 <div id="alignForm">
         <?php
                 echo form_submit(array(

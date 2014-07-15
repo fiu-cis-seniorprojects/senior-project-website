@@ -1022,7 +1022,11 @@ class MatchController extends CI_Controller {
         //add team to p
         foreach ($team as $t) {
             $p->addStudent($t);
-        }
+        }/*
+        var_dump($p->name);
+        var_dump($p->max);
+        var_dump($team);
+        var_dump($p->desiredStudents);*/
         return $p;
     }
     //backtrack algorithmn with Depth first search
@@ -1061,8 +1065,13 @@ class MatchController extends CI_Controller {
         
         foreach($SL as $k => $s){
             if(count($bestTeam) != $max){//fill first best team to start with note for first team dupes don't matter
+                
+                if($this->inList($s,$bestTeam)){
+                    $lol = 'hi';
+                }
                 array_push($bestTeam, $s);
                 array_push($currTeam, $s);
+                
                 $checkIfAddition=1;
                 //set id
                 $checked[$this->hashSkills($s->relevant)] = 1;
@@ -1082,6 +1091,9 @@ class MatchController extends CI_Controller {
                 break;//stop searchign this studentlist, nothing good will come
             }
             elseif(count($currTeam) != $max && !$this->pruneDupe($s, $checked)){//if curr team not full fill with s assuming s not duplicate
+                if($this->inList($s,$currTeam)){
+                    continue;//remove? I'm confused why do I need this? pretty sure dupes impossible? guess not
+                }
                 array_push($currTeam, $s);
                 $checkIfAddition=1;
                 $checked[$this->hashSkills($s->relevant)] = 1;
@@ -1303,8 +1315,25 @@ class MatchController extends CI_Controller {
         return $SL;
     }
     //go from match phase 2 to final show and tell confirmation
-    public function finalizeMatchConfirmation() {
+    public function matchFinalizeHelper() {
         
+        if($_POST['Otherchoice']=='friendly'){//set final result
+            $_SESSION['OtherP'] = $_SESSION['PLf'];
+            $_SESSION['OtherMD'] = $_SESSION['PLfMD'];
+        }
+        else{
+            $_SESSION['OtherP'] = $_SESSION['PLc'];
+            $_SESSION['OtherMD'] = $_SESSION['PLfMD'];
+            $_SESSION['unmatched'] = $_SESSION['1unmatched'];
+        }
+        $data['VIPfinal']=$_SESSION['VIPfinal'];
+        $data['VIPfinalMD']=$_SESSION['VIPfinalMD'];
+        $data['OtherP']=$_SESSION['OtherP'];
+        $data['OtherMD']=$_SESSION['OtherMD'];
+        $data['unmatched']=$_SESSION['unmatched'];
+        
+        
+        $this->load->view('match_finalize',$data);
     }
     /*
     public function backTracking($SL,$sb,$pos){
@@ -1531,5 +1560,13 @@ class MatchController extends CI_Controller {
         }
         return $nsl;
     }
-
+    //dirty fix
+    public function inList($s, $SL) {
+        foreach ($SL as $v) {
+            if($v->id == $s->id){
+                return true;
+            }
+        }        
+        return false;
+    }
 }

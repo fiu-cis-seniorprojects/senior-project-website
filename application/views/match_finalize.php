@@ -15,6 +15,7 @@ and open the template in the editor.
             td{
                 border: 1px solid black;
                 vertical-align: top;
+                text-align: center;
             }
             #on-hover{
                 display: none;
@@ -25,64 +26,83 @@ and open the template in the editor.
             table{
                 table-layout: fixed;
             }
-            
-            input[type="checkbox"]{
-                transform: scale(1.2);         
-                -webkit-transform: scale(1.2); 
-
-                -ms-transform: scale(1.2);    
-                -moz-transform: scale(1.2);    
-                -o-transform: scale(1.2);  
+            div.studentData{
+                display: none;
             }
         </style>
+        <script>
+                        
+                function regionalStudFunction(obj){
+                    
+                    if($("div[class*=studentData][id="+ $(obj).attr("id") +"]").css("display") != "none"){
+                        $("div[class*=studentData][id="+ $(obj).attr("id") +"]").css("display","none");
+                    }
+                    else{
+                        $("div[class*=studentData][id="+ $(obj).attr("id") +"]").css("display","block");
+                    }
+                };
+                
+                function globalStudFunction(){
+                    
+                    if($("div[class*=studentData]").css("display") != "none"){
+                        $("div[class*=studentData]").css("display","none");
+                    }
+                    else{
+                        $("div[class*=studentData]").css("display","block");
+                    }
+                };
+           
+        </script>
         
         <?php $this->load->view("matchmaking_header");
-        $PLc = $VIPs;
-        $PLf = $VIPf;
-        $i = $indexM - 1;
-        $max = $PLc[$i]->max;
-        ?>
+       ?>
      <!--Note: "warning" to make red; "success" for green-->
-     <h1>Match Phase 1 (Manual): Very Important Projects(VIP)</h1>
-     <h6>Choose upto <?php echo $max;?> students from the following possibilities.</h6>
+     <h1>Match Phase 1 (Auto): Very Important Projects(VIP)</h1>
+     <h6>Choose one of two versions of the heuristic VIP matchmaking to proceed for match finalization.</h6>
      Note: When applicable green means the skill is fulfilled. Orange unfulfilled. Gray unnecessary (hover to reveal).
-             <?php
-            echo form_open('match/matchPhase1Helper', array(
-            'class' => 'acceptedStud',
-            ));?>
+                  <?php
+            echo form_open('match/doMatchPhase2');?>
+     <button type="button" id="s" class="globalStud" onclick="globalStudFunction()">Show/Hide All Students</button><br>
      <table style="width: 1000px">
     <tr>
-        <td> <h2>Friendly Heuristic VIP Matching</h2></td>
-        <td> <h2>Scientific Heuristic VIP Matching</h2></td>
+        <td> <h2>VIP Matching Final Details</h2>
+            <b>Overall Match Data</b><br>
+        Student Average Interest: <?php echo $VIPfinalMD->avgInterest;?><br>
+        Average Total Skill Fulfillment: <?php echo $VIPfinalMD->avgTotalSkill;?>%<br>
+        Student Average Fulfillment <?php echo $VIPfinalMD->avgAvgFulfillment;?>%<br>
+        Total Overflow Skills: <?php echo $VIPfinalMD->totalOverflow;?></td>
     </tr>
         <?php
+        //$PLc = array_values($_SESSION['VIPs']);
+        
+        for($i = 0; $i<count($VIPfinal); $i++){
             echo '<tr>';
             echo '<td>';
             echo '<h3>';
-            echo $PLf[$i]->name;
+            echo $VIPfinal[$i]->name;
             echo '</h3>';
             echo '';
-            echo "<b>Head Professor's Rating: </b>".$PLf[$i]->score."<br>";
+            echo "<b>Head Professor's Rating: </b>".$VIPfinal[$i]->score."<br>";
             echo '<b>Student Interest Average: </b>';
-            echo $PLf[$i]->calculateAvgInterest();
+            echo $VIPfinal[$i]->calculateAvgInterest();
             echo '<br>';
             echo '<b>Skill Total Fulfillment: </b>';
-            echo $PLf[$i]->calculateTotalFulfillment();
+            echo $VIPfinal[$i]->calculateTotalFulfillment();
             echo '%<br>';
             echo '<b>Student Average Fulfillment: </b>';
-            echo $PLf[$i]->calculateAvgFulfillment();
+            echo $VIPfinal[$i]->calculateAvgFulfillment();
             echo '%<br>';
             echo '<b>Student Total Overflow Skills:</b>';
-            echo $PLf[$i]->calculateTotalOverflow();
+            echo $VIPfinal[$i]->calculateTotalOverflow();
             echo '<br>';
             echo '<b>Skill Fulfillment Data:</b><br>';
-            foreach ($PLf[$i]->fulfilledSkills as $s) {
+            foreach ($VIPfinal[$i]->fulfilledSkills as $s) {
                 echo '<li class="label label-success skill">';
                 echo $s;
                 echo '</li>';
                 echo ' ';
             }    
-            foreach ($PLf[$i]->missingSkills as $s) {
+            foreach ($VIPfinal[$i]->missingSkills as $s) {
                 echo '<li class="label label-warning skill">';
                 echo $s;
                 echo '</li>';
@@ -90,26 +110,20 @@ and open the template in the editor.
             }
 
             echo '<br><h5>Students Added:(';
-            echo count($PLf[$i]->desiredStudents);
+            echo count($VIPfinal[$i]->desiredStudents);
             echo ' out of ';
-            echo $PLf[$i]->max;
-            echo ')</h5>';
-            foreach($PLf[$i]->desiredStudents as $s){
+            echo $VIPfinal[$i]->max;
+            echo ')   <button type="button" id="s'.$i .'" class="regionalStud" onclick="regionalStudFunction(this)">Show/Hide Students</button></h5>';
+            echo '<div id="s'.$i.'" class="studentData">';
+            foreach($VIPfinal[$i]->desiredStudents as $s){
                 echo '<h6>';
-                $data = array(
-                    'class' => 'acceptedStud',
-                    'name' => $s->id,
-                    'id' => 'studentF',
-                    'value' => $s->name,
-                    'checked' => false,
-                    );
-                echo form_checkbox($data);
                 echo $s->name;
-                echo '</h6>Interest: ';
-                echo $s->scoreList[$PLf[$i]->id];
+                echo '</h6>';
+                echo 'Interest: ';
+                echo $s->scoreList[$VIPfinal[$i]->id];
                 echo '<br>';
                 echo '% of Project Skills Acheived: ';
-                echo $PLf[$i]->figureSkillContribution($s);
+                echo $VIPfinal[$i]->figureSkillContribution($s);
                 echo '%<br>';
                 echo 'Amount of overflow skills: ';
                 echo count($s->overflowSkills);
@@ -153,34 +167,53 @@ and open the template in the editor.
 
                echo '<br>';
             }
+            echo '</div>';
             echo '</td>';
-            
+            echo '</tr>';
+        }
+        ?>
+     
+     </table><br><br><br>
+     
+<table style="width: 1000px">
+    <tr>
+        <td> <h2>Other Projects Final Details</h2>
+            <b>Overall Match Data</b><br>
+        Student Average Interest: <?php echo $OtherMD->avgInterest;?><br>
+        Average Total Skill Fulfillment: <?php echo $OtherMD->avgTotalSkill;?>%<br>
+        Student Average Fulfillment <?php echo $OtherMD->avgAvgFulfillment;?>%<br>
+        Total Overflow Skills: <?php echo $OtherMD->totalOverflow;?></td>
+    </tr>
+        <?php
+        //$PLc = array_values($_SESSION['VIPs']);
+        $OtherP = array_values($OtherP);
+        for($i = 0; $i<count($OtherP); $i++){
+            echo '<tr>';
             echo '<td>';
-                        echo '<h3>';
-            echo $PLc[$i]->name;
+            echo '<h3>';
+            echo $OtherP[$i]->name;
             echo '</h3>';
             echo '';
-            echo "<b>Head Professor's Rating: </b>".$PLc[$i]->score."<br>";
             echo '<b>Student Interest Average: </b>';
-            echo $PLc[$i]->calculateAvgInterest();
+            echo $OtherP[$i]->calculateAvgInterest();
             echo '<br>';
             echo '<b>Skill Total Fulfillment: </b>';
-            echo $PLc[$i]->calculateTotalFulfillment();
+            echo $OtherP[$i]->calculateTotalFulfillment();
             echo '%<br>';
             echo '<b>Student Average Fulfillment: </b>';
-            echo $PLc[$i]->calculateAvgFulfillment();
+            echo $OtherP[$i]->calculateAvgFulfillment();
             echo '%<br>';
-            echo '<b>Student Total Overflow Skills:</b> ';
-            echo $PLc[$i]->calculateTotalOverflow();
+            echo '<b>Student Total Overflow Skills:</b>';
+            echo $OtherP[$i]->calculateTotalOverflow();
             echo '<br>';
             echo '<b>Skill Fulfillment Data:</b><br>';
-            foreach ($PLc[$i]->fulfilledSkills as $s) {
+            foreach ($OtherP[$i]->fulfilledSkills as $s) {
                 echo '<li class="label label-success skill">';
                 echo $s;
                 echo '</li>';
                 echo ' ';
             }    
-            foreach ($PLc[$i]->missingSkills as $s) {
+            foreach ($OtherP[$i]->missingSkills as $s) {
                 echo '<li class="label label-warning skill">';
                 echo $s;
                 echo '</li>';
@@ -188,26 +221,20 @@ and open the template in the editor.
             }
 
             echo '<br><h5>Students Added:(';
-            echo count($PLc[$i]->desiredStudents);
+            echo count($OtherP[$i]->desiredStudents);
             echo ' out of ';
-            echo $PLc[$i]->max;
-            echo ')</h5>';
-            foreach($PLc[$i]->desiredStudents as $s){
+            echo $OtherP[$i]->max;
+            echo ')   <button type="button" id="s'.$i .'" class="regionalStud" onclick="regionalStudFunction(this)">Show/Hide Students</button></h5>';
+            echo '<div id="s'.$i.'" class="studentData">';
+            foreach($OtherP[$i]->desiredStudents as $s){
                 echo '<h6>';
-                $data = array(
-                    'class' => 'acceptedStud',
-                    'name' => $s->id,
-                    'id' => 'studentC',
-                    'value' => $s->name,
-                    'checked' => false,
-                    );
-                echo form_checkbox($data);
                 echo $s->name;
-                echo '</h6>Interest: ';
-                echo $s->scoreList[$PLc[$i]->id];
+                echo '</h6>';
+                echo 'Interest: ';
+                echo $s->scoreList[$OtherP[$i]->id];
                 echo '<br>';
-                echo '% of Project Skills Acheived:';
-                echo $PLc[$i]->figureSkillContribution($s);
+                echo '% of Project Skills Acheived: ';
+                echo $OtherP[$i]->figureSkillContribution($s);
                 echo '%<br>';
                 echo 'Amount of overflow skills: ';
                 echo count($s->overflowSkills);
@@ -237,12 +264,13 @@ and open the template in the editor.
                 echo '<li class="label skill">Hover to reveal overflow skill</li>';
                 echo '<div id="on-hover">';  
                }
+
                foreach ($s->overflowSkills as $skill) {
                    echo '<li class="label skill">';
                    echo $skill;
                    echo '</li>';
                    echo ' ';
-               }
+               } 
                if(count($s->overflowSkills)>0){
                echo '</div>';
                echo '</div>';
@@ -250,76 +278,44 @@ and open the template in the editor.
 
                echo '<br>';
             }
+            echo '</div>';
             echo '</td>';
             echo '</tr>';
+        }
         ?>
      
+</table><br>   
+<table style="width: 1000px">
+         <tr>
+             <td>            
+                 <h3>Unmatched Students </h3>
+                <?php
+                if(count($unmatched) == 0){
+                    echo 'All students matched!';
+                }
+                else{
+                    foreach($unmatched as $s){
+                        echo $s->name;
+                        echo "<br>";
+                    }
+                }
+            ?></td>
+         </tr>
      </table>
-     <span></span>
-     
-     
-     <div id="alignForm">
-        <?php                                
+
+<div id="alignForm">
+        <?php/*
                 echo form_submit(array(
-                    'id' => 'match phase 1 helper',
-                    'name' => 'match phase 1 helper',
+                    'id' => 'do match phase 2',
+                    'name' => 'do match phase 2',
                     'type' => 'Submit',
                     'class' => 'btn btn-primary btn-small pull-left',
-                    'value' => 'Continue Manual VIP Matching',
-                ));
-                ?></div></td>
-        <script>
-            var checkbox = document.getElementsByTagName("input");
-            
-            $(document).ready(function(){
-                $("input").click(function(){
-                    
-                    if($('input:checked').length > <?php echo json_encode($max);?>){
-                        $(this).attr("checked",false);
-                        alert("You selected "+ <?php echo json_encode($max);?>+ " already. Cannot select more.");
-                    }
-                    else{
-                        if($(this).attr("id") == "studentC"){
-                            $("input[id = 'studentF'][name = '" +$(this).attr("name")+"']").prop("disabled",$(this).prop("checked"));
-                        }
-                        else if($(this).attr("id") == "studentF"){
-                            $("input[id = 'studentC'][name = '" +$(this).attr("name")+"']").prop("disabled",$(this).prop("checked"));
-                        }
-                    }
-                });
-            });
+                    'value' => 'Finalize Data',
+                ));*/
+                ?></div>
+            <?php echo form_close() ?>
 
-            
-            $('#match phase 1 helper').click(function(event) {
-            
-                var check = true;
-            
-                if($('input:checked').length != <?php echo json_encode($max);?>){
-                    check = false;
-                }
-                
-                if(check || confirm("Are you sure you want to continue? You've selected "+ $('input:checked').length + " of a possible " + <?php echo json_encode($max);?> +" students.")==true){
-                            
-                    $('#area').empty(); 
-                    document.getElementById("progress").style.display = "block";
-                    
-                    $('input:checked');
-                    $.post("match/matchPhase1Helper") 
-
-                            .done(function(data) {
-                               //alert("Data Loaded: " + data);
-                               document.getElementById("progress").style.display = "none";
-                                $('#area').html(data);
-                            })
-                            .fail(function() {
-                                alert("error");
-                            });
-                    event.preventDefault();
-                }
-                });
-
-        </script>
-     <?php echo form_close();// $_SESSION['otherProjectState']= $_POST["OtherProject"];?>
+     <?php// $_SESSION['otherProjectState']= $_POST["OtherProject"];?>
     <?php $this->load->view("template_footer"); ?>
     </body>
 </html>
