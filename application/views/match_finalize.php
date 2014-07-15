@@ -303,19 +303,10 @@ and open the template in the editor.
          </tr>
      </table>
 
-<div id="alignForm">
-        <?php/*
-                echo form_submit(array(
-                    'id' => 'do match phase 2',
-                    'name' => 'do match phase 2',
-                    'type' => 'Submit',
-                    'class' => 'btn btn-primary btn-small pull-left',
-                    'value' => 'Finalize Data',
-                ));*/
-                ?></div>
             <?php echo form_close() ?>
 
      <?php// $_SESSION['otherProjectState']= $_POST["OtherProject"];?>
+<br>BUTTON TO UPDATE DB AND REDIRECT TO MATCH INDEX GOES HERE!
     <?php $this->load->view("template_footer"); ?>
     </body>
 </html>
