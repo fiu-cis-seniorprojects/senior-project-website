@@ -8,7 +8,7 @@
 
     <?php if ($isUserAStudent) { ?>
 
-	<strong><p>As a reminder, the initial rank values of -1 mean that the projects are unranked. Once the professor informs you in class to rank the projects, you need to rank a minimum of <?php echo $minimum ?> project(s).
+	<strong><p>As a reminder, the initial rank values of -1 mean that the projects are unranked. Score the projects 1-100 (100 being of more interest to you). Once the professor informs you in class to rank the projects, you need to rank a minimum of <?php echo $minimum ?> project(s).
         </p></strong>
 
         <?php if (isset($lSuggestedProjects) && count($lSuggestedProjects) > 0) { ?>

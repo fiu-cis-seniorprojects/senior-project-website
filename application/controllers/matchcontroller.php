@@ -584,6 +584,17 @@ class MatchController extends CI_Controller {
                     redirect('match');
                 }
             }
+            if($r > 100){
+                $msg="Please rank between 1 and 100.";
+                if ($tempUser->isUserAStudent($user_id)) {
+                    setErrorFlashMessage($this, $msg);
+                    redirect('home');
+                } else {
+                    $msg = $msg." Remember 0 for no consideration, 1 for not important, 2-100 for raning VIPs.";
+                    setErrorFlashMessage($this, $msg);
+                    redirect('match');
+                }
+            }
             if ($tempUser->isUserAStudent($user_id)) {
                 if ($r == 0) {
                     $msg = "Nothing saved; zero is disallowed. Need to interest rank projects greater than 0.";
@@ -635,6 +646,24 @@ class MatchController extends CI_Controller {
             setFlashMessage($this, "Saved priority ranking information successfully.");
             redirect('match');
         }
+    }
+    
+    public function saveMatchings() {
+        $PL = array_merge($_SESSION['globalMC']['VIPfinal'],$_SESSION['globalMC']['OtherP']);
+        
+        foreach ($PL as $p) {
+            foreach ($p->desiredStudents as $s) {
+                /*$data = array(
+                'user' => $s->id,
+                'rank' => $p->id,
+                );*/
+                $this->spw_match_model->addStudentToProject($s->id,$p->id);
+            }
+        }
+                    
+            setFlashMessage($this, "Saved match configuration successfully.");
+            redirect('match');
+        
     }
 
     public function saveMinimum() {
@@ -780,7 +809,11 @@ class MatchController extends CI_Controller {
     //Prepare database data  to data for matchmaking V4
     public function preProcessSteps($auto) {
         // PREPARE PROJECTS
+        unset($_SESSION['globalMC']);//global match controller variable (unset to refresh sessions)
         $PL = $this->prepareProjects();
+        /*foreach($PL as $p){
+        //    $p->score =0;
+        */ //use this to test no ranked projects
         //PREPARE STUDENTS
         $SL = $this->prepareStudents();
         //minimum projects a student should have ranked
@@ -832,10 +865,10 @@ class MatchController extends CI_Controller {
         //put projects in VIP listing or normal listing
         foreach($PL as $p){
             if($p->score > 1){
-                $VIP[$p->id] = $p;;
+                $VIP[$p->id] = $p;
             }
-            else{
-                $PPL[$p->id] = $p;;
+            elseif($p->score == 1){
+                $PPL[$p->id] = $p;
             }
         }
         
@@ -847,9 +880,9 @@ class MatchController extends CI_Controller {
         
         //$SL = $this->
         $VIP = array_values($VIP);
-        $_SESSION['VIP'] = $VIP;
-        $_SESSION['PL2'] = $PPL;
-        $_SESSION['SL'] = $PSL;
+        $_SESSION['globalMC']['VIP'] = $VIP;
+        $_SESSION['globalMC']['PL2'] = $PPL;
+        $_SESSION['globalMC']['SL'] = $PSL;
         if($auto){
             $this->doMatchPhase1Auto($VIP, $PSL);
         }
@@ -860,15 +893,24 @@ class MatchController extends CI_Controller {
     }
     //helps move things along with view
     public function matchPhase1Helper() {
-        $index = $_SESSION['indexM'];
-        array_pop($_POST);
+        $index = $_SESSION['globalMC']['indexM'];
+        $goauto = array_pop($_POST);
         $studentReturn = $_POST;
         
         foreach ($studentReturn as $key => $value) {
-            $_SESSION['VIPfinal'][$index-1]->addStudent($this->unsetStudent($_SESSION['SLcombo'],$key));
+            $_SESSION['globalMC']['VIPfinal'][$index-1]->addStudent($this->unsetStudent($_SESSION['globalMC']['SLcombo'],$key));
+        }
+        if($goauto == "Do Rest Automatically"){//tied to button press
+            for($i=0; $i< $index; $i++){
+                $_SESSION['globalMC']['VIPman'][$i] = clone $_SESSION['globalMC']['VIPfinal'][$i];
+                unset($_SESSION['globalMC']['VIPfinal'][$i]);
+            }
+            $this->doMatchPhase1Auto($_SESSION['globalMC']['VIPfinal'], $_SESSION['globalMC']['SLcombo']);
+        }
+        else{
+         $this->doMatchPhase1Manual(NULL, NULL, $index);   
         }
         
-        $this->doMatchPhase1Manual(NULL, NULL, $index);
     }
     //unset array value the hard way
     public function unsetStudent($arr,$id) {
@@ -876,7 +918,7 @@ class MatchController extends CI_Controller {
         foreach ($arr as $key => $value) {
             if($value->id == $id){
                 $theV = $value;
-                unset($_SESSION['SLcombo'][$key]);
+                unset($_SESSION['globalMC']['SLcombo'][$key]);
             }
         }
         return $theV;
@@ -894,18 +936,18 @@ class MatchController extends CI_Controller {
                 $SLcombo = $this->cloneStudents($SL);
             }
             else{//load from session
-                $VIPf = $_SESSION['VIPf'];
-                $VIPs = $_SESSION['VIPs'];
-                $VIPfinal = $_SESSION['VIPfinal'];
-                $SLf = $this->cloneStudents($_SESSION['SLcombo']);
-                $SLs = $this->cloneStudents($_SESSION['SLcombo']);
-                $SLcombo = $_SESSION['SLcombo'];
+                $VIPf = $_SESSION['globalMC']['VIPf'];
+                $VIPs = $_SESSION['globalMC']['VIPs'];
+                $VIPfinal = $_SESSION['globalMC']['VIPfinal'];
+                $SLf = $this->cloneStudents($_SESSION['globalMC']['SLcombo']);
+                $SLs = $this->cloneStudents($_SESSION['globalMC']['SLcombo']);
+                $SLcombo = $_SESSION['globalMC']['SLcombo'];
             }
             if($indexM == count($VIPf)){
                 //generate metadata here
-                $_SESSION['VIPfinalMD'] = $this->generateMatchMetaData($_SESSION['VIPfinal']);
-                $data['VIPfinalMD'] = $_SESSION['VIPfinalMD'];
-                $data['VIPfinal'] = $_SESSION['VIPfinal'];
+                $_SESSION['globalMC']['VIPfinalMD'] = $this->generateMatchMetaData($_SESSION['globalMC']['VIPfinal']);
+                $data['VIPfinalMD'] = $_SESSION['globalMC']['VIPfinalMD'];
+                $data['VIPfinal'] = $_SESSION['globalMC']['VIPfinal'];
                 $this->load->view('match_phase_1_finalize',$data);
             }
             else{
@@ -921,11 +963,11 @@ class MatchController extends CI_Controller {
             $VIPs[$indexM]=$ps;
             $indexM++;
             //should load view to new match page 
-            $_SESSION['VIPfinal'] = $VIPfinal;
-            $_SESSION['VIPf'] = $VIPf;
-            $_SESSION['VIPs'] = $VIPs;
-            $_SESSION['SLcombo'] = $SLcombo;
-            $_SESSION['indexM'] = $indexM;
+            $_SESSION['globalMC']['VIPfinal'] = $VIPfinal;
+            $_SESSION['globalMC']['VIPf'] = $VIPf;
+            $_SESSION['globalMC']['VIPs'] = $VIPs;
+            $_SESSION['globalMC']['SLcombo'] = $SLcombo;
+            $_SESSION['globalMC']['indexM'] = $indexM;
             
             $data['VIPfinal'] = $VIPfinal;
             $data['VIPf'] = $VIPf;
@@ -960,14 +1002,14 @@ class MatchController extends CI_Controller {
             $VIPsMD = $this->generateMatchMetaData($VIPs);
             
             //should load view to new match page 
-            $_SESSION['VIPf'] = $VIPf;
-            $_SESSION['VIPs'] = $VIPs;
-            $_SESSION['VIPfMD'] = $VIPfMD;
-            $_SESSION['VIPsMD'] = $VIPsMD;
+            $_SESSION['globalMC']['VIPf'] = $VIPf;
+            $_SESSION['globalMC']['VIPs'] = $VIPs;
+            $_SESSION['globalMC']['VIPfMD'] = $VIPfMD;
+            $_SESSION['globalMC']['VIPsMD'] = $VIPsMD;
             
-            $_SESSION['SL'] = $SL;
-            $_SESSION['SLrf'] = $SLf;
-            $_SESSION['SLrc'] = $SLs;
+            $_SESSION['globalMC']['SL'] = $SL;
+            $_SESSION['globalMC']['SLrf'] = $SLf;
+            $_SESSION['globalMC']['SLrc'] = $SLs;
             $this->load->view('match_phase_1_auto');
         
     }
@@ -975,18 +1017,30 @@ class MatchController extends CI_Controller {
     public function matchPhase1HelperAuto() {
             
         if($_POST['VIPchoice'] == 'friendly'){//depending on uer choice which is the true vip
-            $_SESSION['VIPfinal'] = $_SESSION['VIPf'];
-            $_SESSION['SLcombo'] = $_SESSION['SLrf'];
-            $_SESSION['VIPfinalMD'] = $_SESSION['VIPfMD'];
+            if(!isset($_SESSION['globalMC']['VIPman'])){
+                $_SESSION['globalMC']['VIPfinal'] = $_SESSION['globalMC']['VIPf'];
+                $_SESSION['globalMC']['VIPfinalMD'] = $_SESSION['globalMC']['VIPfMD'];
+            }
+            else{
+                $_SESSION['globalMC']['VIPfinal'] = array_merge($_SESSION['globalMC']['VIPman'],$_SESSION['globalMC']['VIPf']);
+                $_SESSION['globalMC']['VIPfinalMD'] = $this->generateMatchMetaData($_SESSION['globalMC']['VIPfinal']);
+            }
+            $_SESSION['globalMC']['SLcombo'] = $_SESSION['globalMC']['SLrf'];
         }
         else{
-            $_SESSION['VIPfinal'] = $_SESSION['VIPs'];
-            $_SESSION['SLcombo'] = $_SESSION['SLrc'];
-            $_SESSION['VIPfinalMD'] = $_SESSION['VIPsMD'];          
+            if(!isset($_SESSION['globalMC']['VIPman'])){
+                $_SESSION['globalMC']['VIPfinal'] = $_SESSION['globalMC']['VIPs'];
+                $_SESSION['globalMC']['VIPfinalMD'] = $_SESSION['globalMC']['VIPsMD'];
+            }
+            else{
+                $_SESSION['globalMC']['VIPfinal'] = array_merge($_SESSION['globalMC']['VIPman'],$_SESSION['globalMC']['VIPs']);
+                $_SESSION['globalMC']['VIPfinalMD'] = $this->generateMatchMetaData($_SESSION['globalMC']['VIPfinal']);
+            }
+            $_SESSION['globalMC']['SLcombo'] = $_SESSION['globalMC']['SLrc'];            
         }
         
-        $data['VIPfinalMD'] = $_SESSION['VIPfinalMD'];
-        $data['VIPfinal'] = $_SESSION['VIPfinal'];
+        $data['VIPfinalMD'] = $_SESSION['globalMC']['VIPfinalMD'];
+        $data['VIPfinal'] = $_SESSION['globalMC']['VIPfinal'];
         $this->load->view('match_phase_1_finalize',$data);
     }
     //removes students in p from SL
@@ -1210,19 +1264,19 @@ class MatchController extends CI_Controller {
     
     //student-centric matching
     public function doMatchPhase2() {
-        $PLf = $this->cloneProjects($_SESSION['PL2']);//student free for all remainder projects
-        $PLc = $this->cloneProjects($_SESSION['PL2']);//compromise remainder projects
-        $SL = $_SESSION['SLcombo'];
+        $PLf = $this->cloneProjects($_SESSION['globalMC']['PL2']);//student free for all remainder projects
+        $PLc = $this->cloneProjects($_SESSION['globalMC']['PL2']);//compromise remainder projects
+        $SL = $_SESSION['globalMC']['SLcombo'];
         
         $PLf = $this->doNRMP($PLf,$this->cloneStudents($SL), false);//do free for all
         $PLc = $this->doNRMP($PLc,$this->cloneStudents($SL), true);//do compromise
         $PLcMD = $this->generateMatchMetaData($PLc);
         $PLfMD = $this->generateMatchMetaData($PLf);
         
-        $_SESSION['PLf'] = $PLf;
-        $_SESSION['PLc'] = $PLc;
-        $_SESSION['PLfMD'] = $PLfMD;
-        $_SESSION['PLcMD'] = $PLcMD;
+        $_SESSION['globalMC']['PLf'] = $PLf;
+        $_SESSION['globalMC']['PLc'] = $PLc;
+        $_SESSION['globalMC']['PLfMD'] = $PLfMD;
+        $_SESSION['globalMC']['PLcMD'] = $PLcMD;
         
        //var_dump($SL);
        //var_dump($data['PL2']);
@@ -1232,6 +1286,9 @@ class MatchController extends CI_Controller {
     //generates metadata for a project list (aka match)
     public function generateMatchMetaData($PL){
         $PLMD = new ProjectListMetaData(0, 0, 0, 0);
+        if(empty($PL)){
+            return $PLMD;
+        }
         foreach ($PL as $p) {//do this for easier time viewing       
             $p->generateSkillMetaData();
             $PLMD->avgInterest += $p->calculateAvgInterest();
@@ -1303,7 +1360,7 @@ class MatchController extends CI_Controller {
             }
         }
         $word = $compromise."unmatched";
-        $_SESSION[$word] = $unmatched;
+        $_SESSION['globalMC'][$word] = $unmatched;
         return $PL;
     }
     //for a list of students have their relevant skills be equal to
@@ -1318,19 +1375,19 @@ class MatchController extends CI_Controller {
     public function matchFinalizeHelper() {
         
         if($_POST['Otherchoice']=='friendly'){//set final result
-            $_SESSION['OtherP'] = $_SESSION['PLf'];
-            $_SESSION['OtherMD'] = $_SESSION['PLfMD'];
+            $_SESSION['globalMC']['OtherP'] = $_SESSION['globalMC']['PLf'];
+            $_SESSION['globalMC']['OtherMD'] = $_SESSION['globalMC']['PLfMD'];
         }
         else{
-            $_SESSION['OtherP'] = $_SESSION['PLc'];
-            $_SESSION['OtherMD'] = $_SESSION['PLfMD'];
-            $_SESSION['unmatched'] = $_SESSION['1unmatched'];
+            $_SESSION['globalMC']['OtherP'] = $_SESSION['globalMC']['PLc'];
+            $_SESSION['globalMC']['OtherMD'] = $_SESSION['globalMC']['PLfMD'];
+            $_SESSION['globalMC']['unmatched'] = $_SESSION['globalMC']['1unmatched'];
         }
-        $data['VIPfinal']=$_SESSION['VIPfinal'];
-        $data['VIPfinalMD']=$_SESSION['VIPfinalMD'];
-        $data['OtherP']=$_SESSION['OtherP'];
-        $data['OtherMD']=$_SESSION['OtherMD'];
-        $data['unmatched']=$_SESSION['unmatched'];
+        $data['VIPfinal']=$_SESSION['globalMC']['VIPfinal'];
+        $data['VIPfinalMD']=$_SESSION['globalMC']['VIPfinalMD'];
+        $data['OtherP']=$_SESSION['globalMC']['OtherP'];
+        $data['OtherMD']=$_SESSION['globalMC']['OtherMD'];
+        $data['unmatched']=$_SESSION['globalMC']['unmatched'];
         
         
         $this->load->view('match_finalize',$data);
@@ -1560,7 +1617,7 @@ class MatchController extends CI_Controller {
         }
         return $nsl;
     }
-    //dirty fix
+    //find if student in student array
     public function inList($s, $SL) {
         foreach ($SL as $v) {
             if($v->id == $s->id){

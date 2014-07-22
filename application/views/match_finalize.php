@@ -57,11 +57,11 @@ and open the template in the editor.
         <?php $this->load->view("matchmaking_header");
        ?>
      <!--Note: "warning" to make red; "success" for green-->
-     <h1>Match Phase 1 (Auto): Very Important Projects(VIP)</h1>
-     <h6>Choose one of two versions of the heuristic VIP matchmaking to proceed for match finalization.</h6>
+     <h1>Match Results</h1>
+     <h6>Below is the final match configuration for all projects please confirm to send to database.</h6>
      Note: When applicable green means the skill is fulfilled. Orange unfulfilled. Gray unnecessary (hover to reveal).
                   <?php
-            echo form_open('match/doMatchPhase2');?>
+            echo form_open('match/saveMatchings');?>
      <button type="button" id="s" class="globalStud" onclick="globalStudFunction()">Show/Hide All Students</button><br>
      <table style="width: 1000px">
     <tr>
@@ -302,11 +302,19 @@ and open the template in the editor.
             ?></td>
          </tr>
      </table>
-
+<div id="alignForm">
+        <?php
+                echo form_submit(array(
+                    'id' => 'save matchings',
+                    'name' => 'save matchings',
+                    'type' => 'Submit',
+                    'class' => 'btn btn-primary btn-small pull-left',
+                    'value' => 'Save Match Configuration',
+                ));
+                ?></div>
             <?php echo form_close() ?>
 
      <?php// $_SESSION['otherProjectState']= $_POST["OtherProject"];?>
-<br>BUTTON TO UPDATE DB AND REDIRECT TO MATCH INDEX GOES HERE!
     <?php $this->load->view("template_footer"); ?>
     </body>
 </html>

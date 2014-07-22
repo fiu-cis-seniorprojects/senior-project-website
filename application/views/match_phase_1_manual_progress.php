@@ -267,7 +267,17 @@ and open the template in the editor.
                     'class' => 'btn btn-primary btn-small pull-left',
                     'value' => 'Continue Manual VIP Matching',
                 ));
-                ?></div></td>
+                ?></div>
+     <div id="alignForm" style=" padding-left: 500px">
+        <?php                                
+                echo form_submit(array(
+                    'id' => 'match phase 1 helper',
+                    'name' => 'match phase 1 helper',
+                    'type' => 'Submit',
+                    'class' => 'btn btn-primary btn-small pull-left',
+                    'value' => 'Do Rest Automatically',
+                ));
+                ?></div>
         <script>
             var checkbox = document.getElementsByTagName("input");
             

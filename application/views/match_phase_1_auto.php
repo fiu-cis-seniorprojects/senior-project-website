@@ -21,6 +21,7 @@ and open the template in the editor.
             }
             #overflow:hover #on-hover{
                 display: block;
+                transition-delay: 1s;
             }
             table{
                 table-layout: fixed;
@@ -57,8 +58,8 @@ and open the template in the editor.
         </script>
         
         <?php $this->load->view("matchmaking_header");
-        $MDc = $_SESSION['VIPsMD'];
-        $MDf = $_SESSION['VIPfMD'];?>
+        $MDc = $_SESSION['globalMC']['VIPsMD'];
+        $MDf = $_SESSION['globalMC']['VIPfMD'];?>
      <!--Note: "warning" to make red; "success" for green-->
      <h1>Match Phase 1 (Auto): Very Important Projects(VIP)</h1>
      <h6>Choose one of two versions of the heuristic VIP matchmaking to proceed for match finalization.</h6>
@@ -84,8 +85,8 @@ and open the template in the editor.
         Total Overflow Skills: <?php echo $MDc->totalOverflow;?></td>
     </tr>
         <?php
-        $PLc = array_values($_SESSION['VIPs']);
-        $PLf = array_values($_SESSION['VIPf']);
+        $PLc = array_values($_SESSION['globalMC']['VIPs']);
+        $PLf = array_values($_SESSION['globalMC']['VIPf']);
         
         for($i = 0; $i<count($PLf); $i++){
             echo '<tr>';

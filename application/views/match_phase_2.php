@@ -55,10 +55,10 @@ and open the template in the editor.
         </script>
         
         <?php $this->load->view("matchmaking_header");
-        $MDc = $_SESSION['PLcMD'];
-        $MDf = $_SESSION['PLfMD'];
-        $unmatchedF = $_SESSION["unmatched"];
-        $unmatchedC = $_SESSION["1unmatched"];?>
+        $MDc = $_SESSION['globalMC']['PLcMD'];
+        $MDf = $_SESSION['globalMC']['PLfMD'];
+        $unmatchedF = $_SESSION['globalMC']["unmatched"];
+        $unmatchedC = $_SESSION['globalMC']["1unmatched"];?>
      <!--Note: "warning" to make red; "success" for green-->
      <h1>Match Phase 2: Other Projects</h1>
      <h6>Choose one of two versions of the national residency matchmaking process (NRMP) to proceed for match finalization.</h6>
@@ -86,8 +86,8 @@ and open the template in the editor.
         Amount of Unmatched Students: <?php echo count($unmatchedC);?></td>
     </tr>
         <?php
-        $PLc = array_values($_SESSION['PLc']);
-        $PLf = array_values($_SESSION['PLf']);
+        $PLc = array_values($_SESSION['globalMC']['PLc']);
+        $PLf = array_values($_SESSION['globalMC']['PLf']);
         
         for($i = 0; $i<count($PLf); $i++){
             echo '<tr>';

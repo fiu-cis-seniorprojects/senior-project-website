@@ -24,6 +24,9 @@ $this->load->helper("nav_top");
     <li>Christopher Kerrutt</li>
     <li>William Marquez</li>
     <li>Cynthia Tope</li>
+    
+    <lh><h5>Version 4.0 </h5></lh>
+    <li>Julio Perez</li>
 </ul>
 <ul>
 	<?php

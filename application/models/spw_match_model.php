@@ -202,5 +202,14 @@ class SPW_Match_Model extends CI_Model {
         }
         return $names;
     }
+    
+    public function addStudentToProject( $student_id,$project_id) {
+        $data = array(
+            'project' => $project_id
+        );
+
+        $this->db->where('id', $student_id);
+        $this->db->update('spw_user', $data);
+    }
 
 }

@@ -10,7 +10,7 @@ and open the template in the editor.
     <p>Here you set the priorities of current projects.</p>
     <p>As a reminder, projects with the rank "0" or less will not be considered in the matching algorithm.</p>
     <p>Projects ranked "1" will be considered as not important to you.</p>
-    <p>Projects above "1" will be going intensive matching for optimality and are considered VIP (very important projects).</p>
+    <p>Projects between "2-100" will be going intensive matching for optimality and are considered VIP (very important projects). Higher means more priority.</p>
     <hr>
     <?php
     echo form_open('match/saveRank', array(

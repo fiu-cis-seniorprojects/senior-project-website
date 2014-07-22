@@ -55,10 +55,10 @@ and open the template in the editor.
         </script>
         
         <?php $this->load->view("matchmaking_header");
-        $MDf = $_SESSION['VIPfinalMD'];?>
+        $MDf = $_SESSION['globalMC']['VIPfinalMD'];?>
      <!--Note: "warning" to make red; "success" for green-->
-     <h1>Match Phase 1 (Auto): Very Important Projects(VIP)</h1>
-     <h6>Choose one of two versions of the heuristic VIP matchmaking to proceed for match finalization.</h6>
+     <h1>Match Phase 1 (Auto): Very Important Projects(VIP) Results</h1>
+     <h6>Look over to ensure the follow configuration is what you want. Then click continue to go to phase 2.</h6>
      Note: When applicable green means the skill is fulfilled. Orange unfulfilled. Gray unnecessary (hover to reveal).
                   <?php
             echo form_open('match/doMatchPhase2');?>
@@ -74,7 +74,7 @@ and open the template in the editor.
     </tr>
         <?php
         //$PLc = array_values($_SESSION['VIPs']);
-        $PLf = array_values($_SESSION['VIPfinal']);
+        $PLf = array_values($_SESSION['globalMC']['VIPfinal']);
         
         for($i = 0; $i<count($PLf); $i++){
             echo '<tr>';
