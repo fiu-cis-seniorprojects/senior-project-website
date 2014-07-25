@@ -792,7 +792,7 @@ class MatchController extends CI_Controller {
                     }
                 }
             }
-            $s->skills = array();
+            $s->skills = array_unique($s->skills);
             
         }
         return $SL;
