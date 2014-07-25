@@ -811,8 +811,6 @@ class MatchController extends CI_Controller {
         // PREPARE PROJECTS
         unset($_SESSION['globalMC']);//global match controller variable (unset to refresh sessions)
         $PL = $this->prepareProjects();
-        unset($_SESSION);
-        var_dump($_SESSION);//HELPME
         /*foreach($PL as $p){
         //    $p->score =0;
         */ //use this to test no ranked projects
@@ -1076,8 +1074,9 @@ class MatchController extends CI_Controller {
         
         $team = $this->backTracking($trueSL, $p->skills,$p->max, true);//construct team
         //add team to p
-        var_dump($team);//HELPME
         foreach ($team as $t) {
+            var_dump($t->name);//HELPME
+            var_dump($p->name);
             $p->addStudent($t);
         }/*
         var_dump($p->name);
