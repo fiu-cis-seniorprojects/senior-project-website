@@ -54,6 +54,8 @@
 
         </script>
         <br>
+        <br>
+        <?php echo anchor('files/match_guide' , "Matchmaking Guide Click Here to Download Guide"); ?>
         <?php $this->load->view("template_footer"); ?>
     </div>
 

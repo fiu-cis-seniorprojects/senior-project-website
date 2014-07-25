@@ -50,6 +50,10 @@ class FilesController extends CI_Controller {
         $this->download_single_file("./UserGuide/Student.pdf") ;
         exit;
     }
+    public function match_guide() {
+        $this->download_single_file("./UserGuide/Matchmaking.pdf") ;
+        exit;
+    }
         
     public function download_single_file($file)
     {       
