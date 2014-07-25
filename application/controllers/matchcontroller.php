@@ -792,7 +792,7 @@ class MatchController extends CI_Controller {
                     }
                 }
             }
-            $s->skills = array_unique($s->skills);
+            $s->skills = array();
             
         }
         return $SL;
@@ -1075,8 +1075,6 @@ class MatchController extends CI_Controller {
         $team = $this->backTracking($trueSL, $p->skills,$p->max, true);//construct team
         //add team to p
         foreach ($team as $t) {
-            var_dump($t->name);//HELPME
-            var_dump($p->name);
             $p->addStudent($t);
         }/*
         var_dump($p->name);
@@ -1171,10 +1169,11 @@ class MatchController extends CI_Controller {
             }
             
             if($functionBreak == 1){//break all method stacks
+            /*
                 $max = 0;//reset the statics? is this necessary?
                 $checked = array();
                 $currTeam = array();
-                $functionBreak = 0; 
+                $functionBreak = 0; */
                 break;
             }
         }
