@@ -58,7 +58,7 @@
                     <li>Rank:  <?php
                         $id = htmlspecialchars($iProject->project->id);
 
-                        if ($no_ranks == true) {
+                        if ($no_ranks == true || !isset($ranks[$id])) {
                             echo form_input(array(
                                 'id' => $id,
                                 'name' => $id,

@@ -1120,9 +1120,6 @@ class MatchController extends CI_Controller {
         foreach($SL as $k => $s){
             if(count($bestTeam) != $max){//fill first best team to start with note for first team dupes don't matter
                 
-                if($this->inList($s,$bestTeam)){
-                    $lol = 'hi';
-                }
                 array_push($bestTeam, $s);
                 array_push($currTeam, $s);
                 
