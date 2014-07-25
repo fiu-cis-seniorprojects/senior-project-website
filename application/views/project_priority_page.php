@@ -6,7 +6,7 @@ and open the template in the editor.
 -->
 <div id='area'>
 <?php $this->load->view("template_header"); ?>
-    <h3>Welcome to the Senior Project Website Project Priority Page!</h3>
+    <h3>Welcome to the Senior Project Website Project Priority Page.</h3>
     <p>Here you set the priorities of current projects.</p>
     <p>As a reminder, projects with the rank "0" or less will not be considered in the matching algorithm.</p>
     <p>Projects ranked "1" will be considered as not important to you.</p>

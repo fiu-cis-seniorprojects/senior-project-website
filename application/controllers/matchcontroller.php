@@ -810,7 +810,6 @@ class MatchController extends CI_Controller {
     public function preProcessSteps($auto) {
         // PREPARE PROJECTS
         unset($_SESSION['globalMC']);//global match controller variable (unset to refresh sessions)
-        unset($_SESSION);
         $PL = $this->prepareProjects();
         /*foreach($PL as $p){
         //    $p->score =0;
