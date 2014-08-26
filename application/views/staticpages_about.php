@@ -9,7 +9,7 @@ $this->load->helper("nav_top");
 <p>Performs an intelligent match between users and projects, determining the best project for each student.</p>
 
 <ul>
-    <lh><h4>Developers:</h4></lh>
+    <lh><h4>Developers</h4></lh>
     <lh><h5>Version 1.0 </h5></lh>
     <li>Camilo Sanchez </li>
     <li>Keiser Moya</li>
